@@ -37,6 +37,16 @@ const [Grid, gridApi] = useVbenVxeGrid({
     proxyConfig: {
       ajax: {
         query: async ({ page }, formValues) => {
+          const { created_at } = formValues;
+          const params = formValues;
+          if (
+            created_at &&
+            Array.isArray(created_at) &&
+            created_at.length === 2
+          ) {
+            params.form_time = created_at[0];
+            params.to_time = created_at[1];
+          }
           const list = await getRoleList({
             page: page.currentPage,
             pageSize: page.pageSize,
