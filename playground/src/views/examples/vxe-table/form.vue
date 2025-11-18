@@ -30,6 +30,7 @@ const formOptions: VbenFormProps = {
       fieldName: 'category',
       label: 'Category',
     },
+
     {
       component: 'Input',
       fieldName: 'productName',
@@ -81,37 +82,62 @@ const gridOptions: VxeTableGridOptions<RowType> = {
   },
   columns: [
     { title: '序号', type: 'seq', width: 50 },
-    { align: 'left', title: 'Name', type: 'checkbox', width: 100 },
-    { field: 'category', title: 'Category' },
-    { field: 'color', title: 'Color' },
-    { field: 'productName', title: 'Product Name' },
-    { field: 'price', title: 'Price' },
-    { field: 'releaseDate', formatter: 'formatDateTime', title: 'Date' },
+    { field: 'category', title: 'Category', width: 100 },
+    {
+      field: 'imageUrl',
+      slots: { default: 'image-url' },
+      title: 'Image',
+      width: 100,
+    },
+    {
+      cellRender: { name: 'CellImage' },
+      field: 'imageUrl2',
+      title: 'Render Image',
+      width: 130,
+    },
+    {
+      field: 'open',
+      slots: { default: 'open' },
+      title: 'Open',
+      width: 100,
+    },
+    {
+      field: 'status',
+      slots: { default: 'status' },
+      title: 'Status',
+      width: 100,
+    },
+    { field: 'color', title: 'Color', width: 100 },
+    { field: 'productName', title: 'Product Name', width: 200 },
+    { field: 'price', title: 'Price', width: 100 },
+    {
+      field: 'releaseDate',
+      formatter: 'formatDateTime',
+      title: 'Date',
+      width: 200,
+    },
+    {
+      cellRender: { name: 'CellLink', props: { text: '编辑' } },
+      field: 'action',
+      fixed: 'right',
+      title: '操作',
+      width: 120,
+    },
   ],
-  exportConfig: {},
   height: 'auto',
   keepSource: true,
   pagerConfig: {},
   proxyConfig: {
     ajax: {
-      query: async ({ page }, formValues) => {
-        message.success(`Query params: ${JSON.stringify(formValues)}`);
+      query: async ({ page }) => {
         return await getExampleTableApi({
           page: page.currentPage,
           pageSize: page.pageSize,
-          ...formValues,
         });
       },
     },
   },
-  toolbarConfig: {
-    custom: true,
-    export: true,
-    refresh: true,
-    resizable: true,
-    search: true,
-    zoom: true,
-  },
+  showOverflow: false,
 };
 
 const [Grid] = useVbenVxeGrid({

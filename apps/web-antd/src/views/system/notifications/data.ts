@@ -8,8 +8,8 @@ export function useFormSchema(): VbenFormSchema[] {
   return [
     {
       component: 'Input',
-      fieldName: 'name',
-      label: $t('system.role.roleName'),
+      fieldName: 'realName',
+      label: '用户名称',
       rules: 'required',
     },
     {
@@ -26,18 +26,6 @@ export function useFormSchema(): VbenFormSchema[] {
       fieldName: 'status',
       label: $t('system.role.status'),
     },
-    {
-      component: 'Textarea',
-      fieldName: 'remark',
-      label: $t('system.role.remark'),
-    },
-    {
-      component: 'Input',
-      fieldName: 'permissions',
-      formItemClass: 'items-start',
-      label: $t('system.role.setPermissions'),
-      modelPropName: 'modelValue',
-    },
   ];
 }
 
@@ -45,7 +33,7 @@ export function useGridFormSchema(): VbenFormSchema[] {
   return [
     {
       component: 'Input',
-      fieldName: 'name',
+      fieldName: 'realName',
       label: $t('system.role.roleName'),
     },
     { component: 'Input', fieldName: 'id', label: $t('system.role.id') },
@@ -61,11 +49,7 @@ export function useGridFormSchema(): VbenFormSchema[] {
       fieldName: 'status',
       label: $t('system.role.status'),
     },
-    {
-      component: 'Input',
-      fieldName: 'remark',
-      label: $t('system.role.remark'),
-    },
+
     {
       component: 'RangePicker',
       fieldName: 'created_at',
@@ -81,9 +65,27 @@ export function useColumns<T = SystemRoleApi.SystemRole>(
 ): VxeTableGridOptions['columns'] {
   return [
     {
-      field: 'name',
+      field: 'id',
+      title: $t('system.role.id'),
+      width: 80,
+    },
+
+    {
+      cellRender: { name: 'CellImage' },
+      field: 'avatar',
+      title: '头像',
+      width: 130,
+    },
+    {
+      field: 'realName',
       title: $t('system.role.roleName'),
-      width: 200,
+      minWidth: 200,
+    },
+
+    {
+      field: 'username',
+      title: '用户名',
+      minWidth: 200,
     },
     {
       field: 'id',
@@ -99,11 +101,7 @@ export function useColumns<T = SystemRoleApi.SystemRole>(
       title: $t('system.role.status'),
       width: 100,
     },
-    {
-      field: 'remark',
-      minWidth: 100,
-      title: $t('system.role.remark'),
-    },
+
     {
       field: 'created_at',
       title: $t('system.role.createTime'),
