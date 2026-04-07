@@ -1,5 +1,8 @@
 <script lang="ts" setup>
-import type { OnActionClickParams, VxeTableGridOptions } from '#/adapter/vxe-table';
+import type {
+  OnActionClickParams,
+  VxeTableGridOptions,
+} from '#/adapter/vxe-table';
 import type { SystemFileApi } from '#/api/system/file';
 
 import { Page, useVbenModal } from '@vben/common-ui';
@@ -33,7 +36,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
         query: async ({ page }, formValues) => {
           const { created_at } = formValues;
           const params = formValues;
-          if (created_at && Array.isArray(created_at) && created_at.length === 2) {
+          if (
+            created_at &&
+            Array.isArray(created_at) &&
+            created_at.length === 2
+          ) {
             params.form_time = created_at[0];
             params.to_time = created_at[1];
           }

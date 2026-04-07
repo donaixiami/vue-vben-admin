@@ -79,7 +79,10 @@ export function useColumns<T = SystemFileApi.SystemFile>(
 
     {
       // 添加样式
-      cellRender: { name: 'CellImage', attrs: { class: 'h-20 w-20', fit: 'cover' } },
+      cellRender: {
+        name: 'CellImage',
+        attrs: { class: 'h-20 w-20', fit: 'cover' },
+      },
       field: 'file_url',
       title: '文件',
       width: 130,
