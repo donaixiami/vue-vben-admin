@@ -15,7 +15,7 @@ const logoDark = computed(() => preferences.logo.sourceDark);
     :logo="logo"
     :logo-dark="logoDark"
     page-description=""
-    page-title="后台管理系统"
+    page-title="豆奶管理系统"
   >
     <!-- 自定义工具栏 -->
     <!-- <template #toolbar></template> -->
