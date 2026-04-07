@@ -111,6 +111,7 @@ const ElTreeSelect = defineAsyncComponent(() =>
     import('element-plus/es/components/tree-select/style/css'),
   ]).then(([res]) => res.ElTreeSelect),
 );
+
 const ElUpload = defineAsyncComponent(() =>
   Promise.all([
     import('element-plus/es/components/upload/index'),
@@ -164,9 +165,11 @@ export type ComponentType =
   | 'Input'
   | 'InputNumber'
   | 'RadioGroup'
+  | 'RangePicker'
   | 'Select'
   | 'Space'
   | 'Switch'
+  | 'Textarea'
   | 'TimePicker'
   | 'TreeSelect'
   | 'Upload'
@@ -264,6 +267,40 @@ async function initComponentAdapter() {
     },
     Space: ElSpace,
     Switch: ElSwitch,
+    Textarea: withDefaultPlaceholder(ElInput, 'input', {
+      type: 'textarea',
+      autosize: { minRows: 3, maxRows: 6 },
+    }),
+    RangePicker: (props, { attrs, slots }) => {
+      // 添加默认样式宽度100%
+      const { name, id } = props as Recordable<any>;
+      const extraProps: Recordable<any> = {};
+      if (name && !Array.isArray(name)) {
+        extraProps.name = [name, `${name}_end`];
+      }
+      if (id && !Array.isArray(id)) {
+        extraProps.id = [id, `${id}_end`];
+      }
+      return h(
+        ElDatePicker,
+        {
+          placeholder: '日期',
+          startPlaceholder: '开始时间',
+          endPlaceholder: '结束时间',
+          format: 'YYYY-MM-DD HH:mm:ss',
+          valueFormat: 'YYYY-MM-DD HH:mm:ss',
+          style: {
+            width: '100%',
+            minWidth: '220px',
+          },
+          ...props,
+          ...attrs,
+          ...extraProps,
+          type: 'daterange',
+        },
+        slots,
+      );
+    },
     TimePicker: (props, { attrs, slots }) => {
       const { name, id, isRange } = props;
       const extraProps: Recordable<any> = {};
