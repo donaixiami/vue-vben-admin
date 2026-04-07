@@ -19,8 +19,6 @@ export namespace SystemFileApi {
     create_time: string;
     /** 更新时间 */
     update_time: string;
-    /** 文件扩展名 */
-    file_extension: string;
   }
 }
 
@@ -67,14 +65,25 @@ async function getFileList(params: Recordable<any>) {
 /**
  * 获取文件详情数据
  */
-async function getFileDetail(id: string, data: Omit<SystemFileApi.SystemFile, 'id'>) {
-  return requestClient.get<Array<SystemFileApi.SystemFile>>(`/file/${id}`, data);
+async function getFileDetail(
+  id: string,
+  data: Omit<SystemFileApi.SystemFile, 'id'>,
+) {
+  return requestClient.get<Array<SystemFileApi.SystemFile>>(
+    `/file/${id}`,
+    data,
+  );
 }
 
 /**
  * 上传文件到本地
  */
-export async function setUpload({ file, onError, onProgress, onSuccess }: UploadFileParams) {
+export async function setUpload({
+  file,
+  onError,
+  onProgress,
+  onSuccess,
+}: UploadFileParams) {
   try {
     onProgress?.({ percent: 0 });
     const data = await requestClient.upload('/file/upload', { file });
@@ -88,8 +97,8 @@ export async function setUpload({ file, onError, onProgress, onSuccess }: Upload
  * 上传文件到 OSS
  */
 export async function setUploadOss(params: UploadHandlerParams) {
-  const normalized: UploadHandlerParams = normalizeUploadParams(params);
   try {
+    const normalized = normalizeUploadParams(params);
     normalized.onProgress?.({ percent: 0 });
 
     const data = await requestClient.upload(
@@ -106,6 +115,7 @@ export async function setUploadOss(params: UploadHandlerParams) {
     return data;
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
+    const normalized = normalizeUploadParams(params);
     normalized.onError?.(err);
     throw err;
   }

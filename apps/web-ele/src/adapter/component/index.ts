@@ -344,7 +344,14 @@ async function initComponentAdapter() {
       );
     },
     TreeSelect: withDefaultPlaceholder(ElTreeSelect, 'select'),
-    Upload: ElUpload,
+    Upload: (props, { attrs, slots }) => {
+      const finalProps: Recordable<any> = { ...props, ...attrs };
+      if (finalProps.customRequest && !finalProps.httpRequest) {
+        finalProps.httpRequest = finalProps.customRequest;
+        delete finalProps.customRequest;
+      }
+      return h(ElUpload, finalProps, slots);
+    },
   };
 
   // 将组件注册到全局共享状态中

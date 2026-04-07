@@ -2,7 +2,7 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { SystemRoleApi } from '#/api';
 
-import { upload_file } from '#/api';
+import { setUploadOss } from '#/api/system/file';
 import { $t } from '#/locales';
 
 export function useFormSchema(): VbenFormSchema[] {
@@ -10,10 +10,9 @@ export function useFormSchema(): VbenFormSchema[] {
     {
       component: 'Upload',
       componentProps: {
-        // 更多属性见：https://ant.design/components/upload-cn
         accept: '.png,.jpg,.jpeg',
         // 自动携带认证信息
-        customRequest: upload_file,
+        customRequest: setUploadOss,
         disabled: false,
         maxCount: 1,
         multiple: false,
@@ -44,7 +43,7 @@ export function useFormSchema(): VbenFormSchema[] {
     },
     {
       component: 'Input',
-      fieldName: 'realName',
+      fieldName: 'real_name',
       label: '昵称',
       rules: 'required',
     },

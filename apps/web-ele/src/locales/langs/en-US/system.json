@@ -61,5 +61,10 @@
     "operation": "Operation",
     "permissions": "Permissions",
     "setPermissions": "Permissions"
+  },
+  "file": {
+    "name": "File",
+    "title": "File Management"
   }
+
 }

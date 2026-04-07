@@ -1,12 +1,9 @@
 <script lang="ts" setup>
-import type { Recordable } from '@vben/types';
-
 import type { SystemRoleApi } from '#/api/system/role';
 
-import { computed, nextTick, ref } from 'vue';
+import { nextTick, ref } from 'vue';
 
-import { Tree, useVbenDrawer } from '@vben/common-ui';
-import { IconifyIcon } from '@vben/icons';
+import { useVbenDrawer } from '@vben/common-ui';
 
 import { useVbenForm } from '#/adapter/form';
 import { getMenuList } from '#/api/system/menu';
@@ -77,44 +74,10 @@ async function loadPermissions() {
     loadingPermissions.value = false;
   }
 }
-
-const getDrawerTitle = computed(() => {
-  return formData.value?.id
-    ? $t('common.edit', $t('system.role.name'))
-    : $t('common.create', $t('system.role.name'));
-});
-
-function getNodeClass(node: Recordable<any>) {
-  const classes: string[] = [];
-  if (node.value?.type === 'button') {
-    classes.push('inline-flex');
-  }
-
-  return classes.join(' ');
-}
 </script>
 <template>
-  <Drawer :title="getDrawerTitle">
-    <Form>
-      <template #permissions="slotProps">
-        <Tree
-          :tree-data="permissions"
-          multiple
-          bordered
-          :default-expanded-level="2"
-          :get-node-class="getNodeClass"
-          v-bind="slotProps"
-          value-field="id"
-          label-field="meta.title"
-          icon-field="meta.icon"
-        >
-          <template #node="{ value }">
-            <IconifyIcon v-if="value.meta.icon" :icon="value.meta.icon" />
-            {{ $t(value.meta.title) }}
-          </template>
-        </Tree>
-      </template>
-    </Form>
+  <Drawer :title="$t('common.create') + $t('system.file.name')">
+    <Form />
   </Drawer>
 </template>
 <style lang="css" scoped>

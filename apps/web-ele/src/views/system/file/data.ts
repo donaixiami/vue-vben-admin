@@ -1,8 +1,8 @@
 import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
-import type { SystemRoleApi } from '#/api';
+import type { SystemFileApi } from '#/api';
 
-import { upload_file } from '#/api';
+import { setUploadOss } from '#/api/system/file';
 import { $t } from '#/locales';
 
 export function useFormSchema(): VbenFormSchema[] {
@@ -11,14 +11,15 @@ export function useFormSchema(): VbenFormSchema[] {
       component: 'Upload',
       componentProps: {
         accept: '.png,.jpg,.jpeg',
-        customRequest: upload_file,
+        customRequest: setUploadOss,
         disabled: false,
         maxCount: 1,
         multiple: false,
         showUploadList: true,
         listType: 'picture-card',
+        drag: true,
       },
-      fieldName: 'files',
+      fieldName: 'file',
       label: '文件',
       renderComponentContent: () => {
         return {
@@ -26,38 +27,6 @@ export function useFormSchema(): VbenFormSchema[] {
         };
       },
       rules: 'required',
-    },
-    {
-      component: 'Input',
-      fieldName: 'username',
-      label: '用户名称',
-      rules: 'required',
-    },
-    {
-      component: 'Input',
-      fieldName: 'password',
-      label: '密码',
-      rules: 'required',
-    },
-    {
-      component: 'Input',
-      fieldName: 'realName',
-      label: '昵称',
-      rules: 'required',
-    },
-    {
-      component: 'RadioGroup',
-      componentProps: {
-        buttonStyle: 'solid',
-        options: [
-          { label: $t('common.enabled'), value: 1 },
-          { label: $t('common.disabled'), value: 0 },
-        ],
-        optionType: 'button',
-      },
-      defaultValue: 1,
-      fieldName: 'status',
-      label: $t('system.role.status'),
     },
   ];
 }
@@ -98,7 +67,7 @@ export function useGridFormSchema(): VbenFormSchema[] {
   ];
 }
 
-export function useColumns<T = SystemRoleApi.SystemRole>(
+export function useColumns<T = SystemFileApi.SystemFile>(
   onActionClick: OnActionClickFn<T>,
 ): VxeTableGridOptions['columns'] {
   return [
@@ -109,14 +78,27 @@ export function useColumns<T = SystemRoleApi.SystemRole>(
     },
 
     {
-      cellRender: { name: 'CellImage' },
+      // 添加样式
+      cellRender: { name: 'CellImage', attrs: { class: 'h-20 w-20', fit: 'cover' } },
       field: 'file_url',
       title: '文件',
       width: 130,
+
+      slots: { default: 'image-url' },
     },
     {
       field: 'file_name',
       title: '文件名',
+      minWidth: 200,
+    },
+    {
+      field: 'file_type',
+      title: '文件类型',
+      minWidth: 200,
+    },
+    {
+      field: 'file_extension',
+      title: '文件扩展名',
       minWidth: 200,
     },
 
