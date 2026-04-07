@@ -136,7 +136,6 @@ setupVbenVxeTable({
             align = 'start';
             break;
           }
-
         }
         const presets: Recordable<Recordable<any>> = {
           delete: {
