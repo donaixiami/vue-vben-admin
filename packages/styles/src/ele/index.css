@@ -43,10 +43,11 @@ html .el-loading-mask {
   z-index: 1000;
 }
 
-.el-image-viewer__actions__inner,.el-image-viewer__close {
+.el-image-viewer__actions__inner,
+.el-image-viewer__close {
   color: hsl(var(--primary)) !important;
 }
 
-.border-color{
-  border-color:  hsl(var(--accent));
+.border-color {
+  border-color: hsl(var(--accent));
 }

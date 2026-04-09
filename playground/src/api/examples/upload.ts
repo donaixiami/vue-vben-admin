@@ -6,7 +6,12 @@ interface UploadFileParams {
   onProgress?: (progress: { percent: number }) => void;
   onSuccess?: (data: any, file: File) => void;
 }
-export async function upload_file({ file, onError, onProgress, onSuccess }: UploadFileParams) {
+export async function upload_file({
+  file,
+  onError,
+  onProgress,
+  onSuccess,
+}: UploadFileParams) {
   try {
     onProgress?.({ percent: 0 });
 

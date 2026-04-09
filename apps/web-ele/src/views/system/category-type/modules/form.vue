@@ -40,7 +40,10 @@ const schema: VbenFormSchema[] = [
           return !(await isMenuNameExists(value, formData.value?.id));
         },
         (value) => ({
-          message: $t('ui.formRules.alreadyExists', [$t('system.menu.menuName'), value]),
+          message: $t('ui.formRules.alreadyExists', [
+            $t('system.menu.menuName'),
+            value,
+          ]),
         }),
       ),
   },
@@ -118,7 +121,8 @@ const [Drawer, drawerApi] = useVbenDrawer({
   onConfirm: onSubmit,
   onOpenChange(isOpen) {
     if (isOpen) {
-      const data = drawerApi.getData<SystemCategoryTypeApi.SystemCategoryType>();
+      const data =
+        drawerApi.getData<SystemCategoryTypeApi.SystemCategoryType>();
       if (data?.type === 'link') {
         data.link_src = data.meta?.link;
       } else if (data?.type === 'embedded') {
@@ -127,7 +131,9 @@ const [Drawer, drawerApi] = useVbenDrawer({
       if (data) {
         formData.value = data;
         formApi.setValues(formData.value);
-        titleSuffix.value = formData.value.meta?.title ? $t(formData.value.meta.title) : '';
+        titleSuffix.value = formData.value.meta?.title
+          ? $t(formData.value.meta.title)
+          : '';
       } else {
         formApi.resetForm();
         titleSuffix.value = '';
@@ -141,7 +147,9 @@ async function onSubmit() {
   if (valid) {
     drawerApi.lock();
     const data =
-      await formApi.getValues<Omit<SystemCategoryTypeApi.SystemCategoryType, 'children' | 'id'>>();
+      await formApi.getValues<
+        Omit<SystemCategoryTypeApi.SystemCategoryType, 'children' | 'id'>
+      >();
     if (data.type === 'link') {
       data.meta = { ...data.meta, link: data.link_src };
     } else if (data.type === 'embedded') {

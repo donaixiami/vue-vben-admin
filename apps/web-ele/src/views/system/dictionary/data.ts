@@ -34,7 +34,10 @@ export function useFormSchema(
             return !(await isMenuIdentifierExists(value, formData.value?.id));
           },
           (value) => ({
-            message: $t('ui.formRules.alreadyExists', [$t('system.menu.menuName'), value]),
+            message: $t('ui.formRules.alreadyExists', [
+              $t('system.menu.menuName'),
+              value,
+            ]),
           }),
         ),
     },

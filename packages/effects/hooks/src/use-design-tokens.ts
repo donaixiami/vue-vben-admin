@@ -50,7 +50,8 @@ export function useAntdDesignTokens() {
 
       getCssVariableValue('--primary-foreground');
 
-      tokens.colorBorderSecondary = tokens.colorBorder = getCssVariableValue('--border');
+      tokens.colorBorderSecondary = tokens.colorBorder =
+        getCssVariableValue('--border');
 
       tokens.colorBgElevated = getCssVariableValue('--popover');
 
@@ -138,11 +139,14 @@ export function useNaiveDesignTokens() {
 
       commonTokens.baseColor = getCssVariableValue('--primary-foreground');
 
-      commonTokens.dividerColor = commonTokens.borderColor = getCssVariableValue('--border');
+      commonTokens.dividerColor = commonTokens.borderColor =
+        getCssVariableValue('--border');
 
-      commonTokens.modalColor = commonTokens.popoverColor = getCssVariableValue('--popover');
+      commonTokens.modalColor = commonTokens.popoverColor =
+        getCssVariableValue('--popover');
 
-      commonTokens.tableColor = commonTokens.cardColor = getCssVariableValue('--card');
+      commonTokens.tableColor = commonTokens.cardColor =
+        getCssVariableValue('--card');
 
       commonTokens.bodyColor = getCssVariableValue('--background');
       commonTokens.invertedColor = getCssVariableValue('--background-deep');
@@ -301,7 +305,9 @@ export function useElementPlusDesignTokens() {
         '--el-fill-color-darker': getCssVariableValue('--accent-darker'),
 
         // 解决ElLoading背景色问题
-        '--el-mask-color': isDark.value ? 'rgba(0,0,0,.8)' : 'rgba(255,255,255,.9)',
+        '--el-mask-color': isDark.value
+          ? 'rgba(0,0,0,.8)'
+          : 'rgba(255,255,255,.9)',
 
         '--el-text-color-primary': getCssVariableValue('--foreground'),
 

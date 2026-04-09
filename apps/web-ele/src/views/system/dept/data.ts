@@ -33,13 +33,19 @@ export function useSchema(): VbenFormSchema[] {
       rules: z
         .string()
         .min(2, $t('ui.formRules.minLength', [$t('system.dept.deptName'), 2]))
-        .max(20, $t('ui.formRules.maxLength', [$t('system.dept.deptName'), 20])),
+        .max(
+          20,
+          $t('ui.formRules.maxLength', [$t('system.dept.deptName'), 20]),
+        ),
     },
     {
       component: 'Input',
       fieldName: 'manager',
       label: '部门负责人',
-      rules: z.string().min(3, '负责人姓名至少3个字符').max(10, '负责人姓名最多10个字符'),
+      rules: z
+        .string()
+        .min(3, '负责人姓名至少3个字符')
+        .max(10, '负责人姓名最多10个字符'),
     },
     {
       component: 'Input',

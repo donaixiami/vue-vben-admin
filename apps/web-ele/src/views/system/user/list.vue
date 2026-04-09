@@ -1,7 +1,10 @@
 <script lang="ts" setup>
 import type { Recordable } from '@vben/types';
 
-import type { OnActionClickParams, VxeTableGridOptions } from '#/adapter/vxe-table';
+import type {
+  OnActionClickParams,
+  VxeTableGridOptions,
+} from '#/adapter/vxe-table';
 import type { SystemUserApi } from '#/api';
 
 import { Page, useVbenDrawer } from '@vben/common-ui';
@@ -37,7 +40,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
         query: async ({ page }, formValues) => {
           const { created_at } = formValues;
           const params = formValues;
-          if (created_at && Array.isArray(created_at) && created_at.length === 2) {
+          if (
+            created_at &&
+            Array.isArray(created_at) &&
+            created_at.length === 2
+          ) {
             params.form_time = created_at[0];
             params.to_time = created_at[1];
           }
@@ -104,7 +111,10 @@ function confirm(content: string, title: string) {
  * @param row 行数据
  * @returns 返回false则中止改变，返回其他值（undefined、true）则允许改变
  */
-async function onStatusChange(newStatus: number, row: SystemUserApi.SystemUser) {
+async function onStatusChange(
+  newStatus: number,
+  row: SystemUserApi.SystemUser,
+) {
   const status: Recordable<string> = {
     0: '禁用',
     1: '启用',
