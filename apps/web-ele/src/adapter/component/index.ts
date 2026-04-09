@@ -128,10 +128,7 @@ const withDefaultPlaceholder = <T extends Component>(
     name: component.name,
     inheritAttrs: false,
     setup: (props: any, { attrs, expose, slots }) => {
-      const placeholder =
-        props?.placeholder ||
-        attrs?.placeholder ||
-        $t(`ui.placeholder.${type}`);
+      const placeholder = props?.placeholder || attrs?.placeholder || $t(`ui.placeholder.${type}`);
       // 透传组件暴露的方法
       const innerRef = ref();
       expose(
@@ -144,11 +141,7 @@ const withDefaultPlaceholder = <T extends Component>(
         ),
       );
       return () =>
-        h(
-          component,
-          { ...componentProps, placeholder, ...props, ...attrs, ref: innerRef },
-          slots,
-        );
+        h(component, { ...componentProps, placeholder, ...props, ...attrs, ref: innerRef }, slots);
     },
   });
 };
@@ -216,16 +209,10 @@ async function initComponentAdapter() {
         const { options, isButton } = attrs;
         if (Array.isArray(options)) {
           defaultSlot = () =>
-            options.map((option) =>
-              h(isButton ? ElCheckboxButton : ElCheckbox, option),
-            );
+            options.map((option) => h(isButton ? ElCheckboxButton : ElCheckbox, option));
         }
       }
-      return h(
-        ElCheckboxGroup,
-        { ...props, ...attrs },
-        { ...slots, default: defaultSlot },
-      );
+      return h(ElCheckboxGroup, { ...props, ...attrs }, { ...slots, default: defaultSlot });
     },
     // 自定义默认按钮
     DefaultButton: (props, { attrs, slots }) => {
@@ -251,16 +238,10 @@ async function initComponentAdapter() {
         const { options } = attrs;
         if (Array.isArray(options)) {
           defaultSlot = () =>
-            options.map((option) =>
-              h(attrs.isButton ? ElRadioButton : ElRadio, option),
-            );
+            options.map((option) => h(attrs.isButton ? ElRadioButton : ElRadio, option));
         }
       }
-      return h(
-        ElRadioGroup,
-        { ...props, ...attrs },
-        { ...slots, default: defaultSlot },
-      );
+      return h(ElRadioGroup, { ...props, ...attrs }, { ...slots, default: defaultSlot });
     },
     Select: (props, { attrs, slots }) => {
       return h(ElSelectV2, { ...props, attrs }, slots);

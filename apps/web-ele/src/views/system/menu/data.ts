@@ -6,18 +6,18 @@ import { $t } from '#/locales';
 export function getMenuTypeOptions() {
   return [
     {
-      color: 'processing',
+      type: 'primary',
       label: $t('system.menu.typeCatalog'),
       value: 'catalog',
     },
-    { color: 'default', label: $t('system.menu.typeMenu'), value: 'menu' },
-    { color: 'error', label: $t('system.menu.typeButton'), value: 'button' },
+    { type: 'info', label: $t('system.menu.typeMenu'), value: 'menu' },
+    { type: 'danger', label: $t('system.menu.typeButton'), value: 'button' },
     {
-      color: 'success',
+      type: 'success',
       label: $t('system.menu.typeEmbedded'),
       value: 'embedded',
     },
-    { color: 'warning', label: $t('system.menu.typeLink'), value: 'link' },
+    { type: 'warning', label: $t('system.menu.typeLink'), value: 'link' },
   ];
 }
 
@@ -42,7 +42,7 @@ export function useColumns(
       width: 100,
     },
     {
-      field: 'authCode',
+      field: 'auth_code',
       title: $t('system.menu.authCode'),
       width: 200,
     },

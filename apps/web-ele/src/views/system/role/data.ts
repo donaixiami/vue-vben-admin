@@ -16,6 +16,7 @@ export function useFormSchema(): VbenFormSchema[] {
       component: 'RadioGroup',
       componentProps: {
         buttonStyle: 'solid',
+        isButton: true,
         options: [
           { label: $t('common.enabled'), value: 1 },
           { label: $t('common.disabled'), value: 0 },
@@ -26,6 +27,14 @@ export function useFormSchema(): VbenFormSchema[] {
       fieldName: 'status',
       label: $t('system.role.status'),
     },
+
+    {
+      component: 'Input',
+      fieldName: 'permissions',
+      formItemClass: 'items-start',
+      label: $t('system.role.setPermissions'),
+      modelPropName: 'modelValue',
+    },
     {
       component: 'Input',
       fieldName: 'remark',
@@ -35,13 +44,6 @@ export function useFormSchema(): VbenFormSchema[] {
       },
       formItemClass: 'items-start',
       label: $t('system.role.remark'),
-    },
-    {
-      component: 'Input',
-      fieldName: 'permissions',
-      formItemClass: 'items-start',
-      label: $t('system.role.setPermissions'),
-      modelPropName: 'modelValue',
     },
   ];
 }

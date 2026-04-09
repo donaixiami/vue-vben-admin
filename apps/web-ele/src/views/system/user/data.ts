@@ -2,67 +2,7 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { SystemRoleApi } from '#/api';
 
-import { setUploadOss } from '#/api/system/file';
 import { $t } from '#/locales';
-
-export function useFormSchema(): VbenFormSchema[] {
-  return [
-    {
-      component: 'Upload',
-      componentProps: {
-        accept: '.png,.jpg,.jpeg',
-        // 自动携带认证信息
-        customRequest: setUploadOss,
-        disabled: false,
-        maxCount: 1,
-        multiple: false,
-        showUploadList: true,
-        // 上传列表的内建样式，支持四种基本样式 text, picture, picture-card 和 picture-circle
-        listType: 'picture-card',
-      },
-      fieldName: 'files',
-      label: $t('examples.form.file'),
-      renderComponentContent: () => {
-        return {
-          default: () => $t('examples.form.upload-image'),
-        };
-      },
-      rules: 'required',
-    },
-    {
-      component: 'Input',
-      fieldName: 'username',
-      label: '用户名称',
-      rules: 'required',
-    },
-    {
-      component: 'Input',
-      fieldName: 'password',
-      label: '密码',
-      rules: 'required',
-    },
-    {
-      component: 'Input',
-      fieldName: 'real_name',
-      label: '昵称',
-      rules: 'required',
-    },
-    {
-      component: 'RadioGroup',
-      componentProps: {
-        buttonStyle: 'solid',
-        options: [
-          { label: $t('common.enabled'), value: 1 },
-          { label: $t('common.disabled'), value: 0 },
-        ],
-        optionType: 'button',
-      },
-      defaultValue: 1,
-      fieldName: 'status',
-      label: $t('system.role.status'),
-    },
-  ];
-}
 
 export function useGridFormSchema(): VbenFormSchema[] {
   return [
@@ -118,7 +58,7 @@ export function useColumns<T = SystemRoleApi.SystemRole>(
       width: 130,
     },
     {
-      field: 'realName',
+      field: 'real_name',
       title: $t('system.role.roleName'),
       minWidth: 200,
     },

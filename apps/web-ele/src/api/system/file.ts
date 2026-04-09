@@ -67,25 +67,14 @@ async function getFileList(params: Recordable<any>) {
 /**
  * 获取文件详情数据
  */
-async function getFileDetail(
-  id: string,
-  data: Omit<SystemFileApi.SystemFile, 'id'>,
-) {
-  return requestClient.get<Array<SystemFileApi.SystemFile>>(
-    `/file/${id}`,
-    data,
-  );
+async function getFileDetail(id: string, data: Omit<SystemFileApi.SystemFile, 'id'>) {
+  return requestClient.get<Array<SystemFileApi.SystemFile>>(`/file/${id}`, data);
 }
 
 /**
  * 上传文件到本地
  */
-export async function setUpload({
-  file,
-  onError,
-  onProgress,
-  onSuccess,
-}: UploadFileParams) {
+export async function setUpload({ file, onError, onProgress, onSuccess }: UploadFileParams) {
   try {
     onProgress?.({ percent: 0 });
     const data = await requestClient.upload('/file/upload', { file });
@@ -114,6 +103,7 @@ export async function setUploadOss(params: UploadHandlerParams) {
 
     normalized.onProgress?.({ percent: 100 });
     normalized.onSuccess?.(data, normalized.file);
+    console.log('data:::ff', data);
     return data;
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));

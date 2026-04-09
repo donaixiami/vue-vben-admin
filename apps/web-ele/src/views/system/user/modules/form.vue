@@ -1,40 +1,112 @@
 <script lang="ts" setup>
-import type { Recordable } from '@vben/types';
-
-import type { SystemRoleApi } from '#/api/system/role';
+import type { VbenFormSchema } from '#/adapter/form';
+import type { SystemUserApi } from '#/api/system/user';
 
 import { computed, nextTick, ref } from 'vue';
 
-import { Tree, useVbenDrawer } from '@vben/common-ui';
-import { IconifyIcon } from '@vben/icons';
+import { useVbenDrawer } from '@vben/common-ui';
 
 import { useVbenForm } from '#/adapter/form';
-import { getMenuList } from '#/api/system/menu';
+import { upload_file } from '#/api/common/upload';
 import { createUser, updateUser } from '#/api/system/user';
 import { $t } from '#/locales';
 
-import { useFormSchema } from '../data';
-
 const emits = defineEmits(['success']);
 
-const formData = ref<SystemRoleApi.SystemRole>();
+const formData = ref<SystemUserApi.SystemUser>();
 
 const [Form, formApi] = useVbenForm({
   schema: useFormSchema(),
   showDefaultActions: false,
 });
 
-const permissions = ref<any[]>([]);
-const loadingPermissions = ref(false);
+function useFormSchema(): VbenFormSchema[] {
+  return [
+    {
+      component: 'Upload',
+      componentProps: {
+        accept: '.png,.jpg,.jpeg',
+        httpRequest: upload_file,
+        onSuccess: (response: any, uploadFile: any) => {
+          const url = response?.url ?? response?.file_url;
+          if (url) {
+            uploadFile.url = url;
+          }
+        },
+        disabled: false,
+        maxCount: 1,
+        multiple: false,
+        showUploadList: true,
+        limit: 1,
+        listType: 'picture-card',
+      },
+      fieldName: 'avatars',
+      label: '头像',
+      renderComponentContent: () => {
+        return {
+          default: () => $t('examples.form.upload-image'),
+        };
+      },
+      rules: 'required',
+    },
+    {
+      component: 'Input',
+      fieldName: 'username',
+      label: '用户名称',
+      rules: 'required',
+    },
+    {
+      component: 'Input',
+      fieldName: 'password',
+      label: '密码',
+      dependencies: {
+        triggerFields: ['id'],
+        async rules() {
+          return id.value ? '' : 'required';
+        },
+      },
+    },
+    {
+      component: 'Input',
+      fieldName: 'real_name',
+      label: '昵称',
+      rules: 'required',
+    },
+    {
+      component: 'RadioGroup',
+      componentProps: {
+        buttonStyle: 'solid',
+        isButton: true,
+        options: [
+          { label: $t('common.enabled'), value: 1 },
+          { label: $t('common.disabled'), value: 0 },
+        ],
+        optionType: 'button',
+      },
+      defaultValue: 1,
+      fieldName: 'status',
+      label: $t('system.role.status'),
+    },
+  ];
+}
 
 const id = ref();
 const [Drawer, drawerApi] = useVbenDrawer({
   async onConfirm() {
     const { valid } = await formApi.validate();
     if (!valid) return;
-    const values = await formApi.getValues();
+    const values = (await formApi.getValues()) as SystemUserApi.SystemUser;
+    const response = values.avatars[0].response as { id: string; url: string };
+
+    const data: SystemUserApi.SystemUser = {
+      // 去掉 avatars 字段
+      ...values,
+      avatar_file_id: response.id,
+    };
+    delete data.avatars;
+
     drawerApi.lock();
-    (id.value ? updateUser(id.value, values) : createUser(values))
+    (id.value ? updateUser(id.value, data) : createUser(data))
       .then(() => {
         emits('success');
         drawerApi.close();
@@ -46,7 +118,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
 
   async onOpenChange(isOpen) {
     if (isOpen) {
-      const data = drawerApi.getData<SystemRoleApi.SystemRole>();
+      const data = drawerApi.getData<SystemUserApi.SystemUser>();
       formApi.resetForm();
 
       if (data) {
@@ -56,9 +128,6 @@ const [Drawer, drawerApi] = useVbenDrawer({
         id.value = undefined;
       }
 
-      if (permissions.value.length === 0) {
-        await loadPermissions();
-      }
       // Wait for Vue to flush DOM updates (form fields mounted)
       await nextTick();
       if (data) {
@@ -68,54 +137,15 @@ const [Drawer, drawerApi] = useVbenDrawer({
   },
 });
 
-async function loadPermissions() {
-  loadingPermissions.value = true;
-  try {
-    const res = await getMenuList();
-    permissions.value = res as unknown as any[];
-  } finally {
-    loadingPermissions.value = false;
-  }
-}
-
 const getDrawerTitle = computed(() => {
   return formData.value?.id
     ? $t('common.edit', $t('system.role.name'))
     : $t('common.create', $t('system.role.name'));
 });
-
-function getNodeClass(node: Recordable<any>) {
-  const classes: string[] = [];
-  if (node.value?.type === 'button') {
-    classes.push('inline-flex');
-  }
-
-  return classes.join(' ');
-}
 </script>
 <template>
   <Drawer :title="getDrawerTitle">
-    <Form>
-      <template #permissions="slotProps">
-        <!-- loadingPermissions -->
-        <Tree
-          :tree-data="permissions"
-          multiple
-          bordered
-          :default-expanded-level="2"
-          :get-node-class="getNodeClass"
-          v-bind="slotProps"
-          value-field="id"
-          label-field="meta.title"
-          icon-field="meta.icon"
-        >
-          <template #node="{ value }">
-            <IconifyIcon v-if="value.meta.icon" :icon="value.meta.icon" />
-            {{ $t(value.meta.title) }}
-          </template>
-        </Tree>
-      </template>
-    </Form>
+    <Form />
   </Drawer>
 </template>
 <style lang="css" scoped>

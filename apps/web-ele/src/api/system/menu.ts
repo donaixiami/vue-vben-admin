@@ -4,34 +4,36 @@ import { requestClient } from '#/api/request';
 
 export namespace SystemMenuApi {
   /** 徽标颜色集合 */
-  export const BadgeVariants = [
-    'default',
-    'destructive',
-    'primary',
-    'success',
-    'warning',
-  ] as const;
+  export const BadgeVariants = ['default', 'destructive', 'primary', 'success', 'warning'] as const;
   /** 徽标类型集合 */
   export const BadgeTypes = ['dot', 'normal'] as const;
   /** 菜单类型集合 */
-  export const MenuTypes = [
-    'catalog',
-    'menu',
-    'embedded',
-    'link',
-    'button',
-  ] as const;
+  export const MenuTypes = ['catalog', 'menu', 'embedded', 'link', 'button'] as const;
   /** 系统菜单 */
   export interface SystemMenu {
     [key: string]: any;
     /** 后端权限标识 */
-    authCode: string;
+    auth_code: string;
     /** 子级 */
     children?: SystemMenu[];
     /** 组件 */
     component?: string;
     /** 菜单ID */
     id: string;
+    /** 激活时的路径 */
+    active_path?: string;
+    /** 外链页面的URL */
+    link_src?: string;
+    /** 菜单名称 */
+    name: string;
+    /** 路由路径 */
+    path: string;
+    /** 父级ID */
+    pid: string;
+    /** 重定向 */
+    redirect?: string;
+    /** 菜单类型 */
+    type: (typeof MenuTypes)[number];
     /** 菜单元数据 */
     meta?: {
       /** 激活时显示的图标 */
@@ -77,16 +79,6 @@ export namespace SystemMenuApi {
       /** 菜单标题 */
       title?: string;
     };
-    /** 菜单名称 */
-    name: string;
-    /** 路由路径 */
-    path: string;
-    /** 父级ID */
-    pid: string;
-    /** 重定向 */
-    redirect?: string;
-    /** 菜单类型 */
-    type: (typeof MenuTypes)[number];
   }
 }
 
@@ -97,19 +89,13 @@ async function getMenuList() {
   return requestClient.get<Array<SystemMenuApi.SystemMenu>>('/system/menu/all');
 }
 
-async function isMenuNameExists(
-  name: string,
-  id?: SystemMenuApi.SystemMenu['id'],
-) {
+async function isMenuNameExists(name: string, id?: SystemMenuApi.SystemMenu['id']) {
   return requestClient.get<boolean>('/system/menu/name-exists', {
     params: { id, name },
   });
 }
 
-async function isMenuPathExists(
-  path: string,
-  id?: SystemMenuApi.SystemMenu['id'],
-) {
+async function isMenuPathExists(path: string, id?: SystemMenuApi.SystemMenu['id']) {
   return requestClient.get<boolean>('/system/menu/path-exists', {
     params: { id, path },
   });
@@ -119,9 +105,7 @@ async function isMenuPathExists(
  * 创建菜单
  * @param data 菜单数据
  */
-async function createMenu(
-  data: Omit<SystemMenuApi.SystemMenu, 'children' | 'id'>,
-) {
+async function createMenu(data: Omit<SystemMenuApi.SystemMenu, 'children' | 'id'>) {
   return requestClient.post('/system/menu', data);
 }
 
@@ -131,10 +115,7 @@ async function createMenu(
  * @param id 菜单 ID
  * @param data 菜单数据
  */
-async function updateMenu(
-  id: string,
-  data: Omit<SystemMenuApi.SystemMenu, 'children' | 'id'>,
-) {
+async function updateMenu(id: string, data: Omit<SystemMenuApi.SystemMenu, 'children' | 'id'>) {
   return requestClient.put(`/system/menu/${id}`, data);
 }
 
@@ -146,11 +127,4 @@ async function deleteMenu(id: string) {
   return requestClient.delete(`/system/menu/${id}`);
 }
 
-export {
-  createMenu,
-  deleteMenu,
-  getMenuList,
-  isMenuNameExists,
-  isMenuPathExists,
-  updateMenu,
-};
+export { createMenu, deleteMenu, getMenuList, isMenuNameExists, isMenuPathExists, updateMenu };

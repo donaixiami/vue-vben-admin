@@ -33,16 +33,13 @@ export function useSchema(): VbenFormSchema[] {
       rules: z
         .string()
         .min(2, $t('ui.formRules.minLength', [$t('system.dept.deptName'), 2]))
-        .max(
-          20,
-          $t('ui.formRules.maxLength', [$t('system.dept.deptName'), 20]),
-        ),
+        .max(20, $t('ui.formRules.maxLength', [$t('system.dept.deptName'), 20])),
     },
     {
       component: 'Input',
       fieldName: 'manager',
       label: '部门负责人',
-      rules: z.string().max(10, '负责人姓名最多10个字符').optional(),
+      rules: z.string().min(3, '负责人姓名至少3个字符').max(10, '负责人姓名最多10个字符'),
     },
     {
       component: 'Input',
@@ -53,8 +50,7 @@ export function useSchema(): VbenFormSchema[] {
         .regex(
           /^(?:(?:\+|00)86)?1(?:3\d|4[5-79]|5[0-35-9]|6[5-7]|7[0-8]|8\d|9[1589])\d{8}$/,
           '请输入正确的联系电话',
-        )
-        .optional(),
+        ),
     },
     {
       component: 'Input',
@@ -67,6 +63,7 @@ export function useSchema(): VbenFormSchema[] {
       component: 'RadioGroup',
       componentProps: {
         buttonStyle: 'solid',
+        isButton: true,
         options: [
           { label: $t('common.enabled'), value: 1 },
           { label: $t('common.disabled'), value: 0 },
@@ -113,6 +110,18 @@ export function useColumns(
       width: 150,
     },
 
+    {
+      field: 'manager',
+      title: '部门负责人',
+    },
+    {
+      field: 'phone',
+      title: '联系电话',
+    },
+    {
+      field: 'email',
+      title: '联系邮箱',
+    },
     {
       field: 'remark',
       title: $t('system.dept.remark'),

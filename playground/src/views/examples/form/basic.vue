@@ -246,9 +246,7 @@ const [BaseForm, baseFormApi] = useVbenForm({
           default: () => ['我已阅读并同意'],
         };
       },
-      rules: z
-        .boolean()
-        .refine((v) => v, { message: '为什么不同意？勾上它！' }),
+      rules: z.boolean().refine((v) => v, { message: '为什么不同意？勾上它！' }),
     },
     {
       component: 'Mentions',
@@ -279,17 +277,13 @@ const [BaseForm, baseFormApi] = useVbenForm({
         class: 'w-auto',
       },
       fieldName: 'switch',
-      help: () =>
-        ['这是一个多行帮助信息', '第二行', '第三行'].map((v) => h('p', v)),
+      help: () => ['这是一个多行帮助信息', '第二行', '第三行'].map((v) => h('p', v)),
       label: '开关',
     },
     {
       component: 'DatePicker',
       fieldName: 'datePicker',
-      help: (values) =>
-        [`这是一个可输出其他字段值的帮助信息${values?.rate}`].map((v) =>
-          h('p', v),
-        ),
+      help: (values) => [`这是一个可输出其他字段值的帮助信息${values?.rate}`].map((v) => h('p', v)),
       label: '日期选择框',
     },
     {

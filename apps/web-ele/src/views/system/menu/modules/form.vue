@@ -59,10 +59,7 @@ const schema: VbenFormSchema[] = [
           return !(await isMenuNameExists(value, formData.value?.id));
         },
         (value) => ({
-          message: $t('ui.formRules.alreadyExists', [
-            $t('system.menu.menuName'),
-            value,
-          ]),
+          message: $t('ui.formRules.alreadyExists', [$t('system.menu.menuName'), value]),
         }),
       ),
   },
@@ -142,10 +139,7 @@ const schema: VbenFormSchema[] = [
           return !(await isMenuPathExists(value, formData.value?.id));
         },
         (value) => ({
-          message: $t('ui.formRules.alreadyExists', [
-            $t('system.menu.path'),
-            value,
-          ]),
+          message: $t('ui.formRules.alreadyExists', [$t('system.menu.path'), value]),
         }),
       ),
   },
@@ -233,7 +227,7 @@ const schema: VbenFormSchema[] = [
       },
       triggerFields: ['type'],
     },
-    fieldName: 'linkSrc',
+    fieldName: 'link_src',
     label: $t('system.menu.linkSrc'),
     rules: z.string().url($t('ui.formRules.invalidURL')),
   },
@@ -248,7 +242,7 @@ const schema: VbenFormSchema[] = [
       },
       triggerFields: ['type'],
     },
-    fieldName: 'authCode',
+    fieldName: 'auth_code',
     label: $t('system.menu.authCode'),
   },
   {
@@ -268,6 +262,8 @@ const schema: VbenFormSchema[] = [
   {
     component: 'Select',
     componentProps: {
+      // 清空
+      clearable: true,
       allowClear: true,
       class: 'w-full',
       options: [
@@ -449,16 +445,14 @@ const [Drawer, drawerApi] = useVbenDrawer({
     if (isOpen) {
       const data = drawerApi.getData<SystemMenuApi.SystemMenu>();
       if (data?.type === 'link') {
-        data.linkSrc = data.meta?.link;
+        data.link_src = data.meta?.link;
       } else if (data?.type === 'embedded') {
-        data.linkSrc = data.meta?.iframeSrc;
+        data.link_src = data.meta?.iframeSrc;
       }
       if (data) {
         formData.value = data;
         formApi.setValues(formData.value);
-        titleSuffix.value = formData.value.meta?.title
-          ? $t(formData.value.meta.title)
-          : '';
+        titleSuffix.value = formData.value.meta?.title ? $t(formData.value.meta.title) : '';
       } else {
         formApi.resetForm();
         titleSuffix.value = '';
@@ -471,21 +465,16 @@ async function onSubmit() {
   const { valid } = await formApi.validate();
   if (valid) {
     drawerApi.lock();
-    const data =
-      await formApi.getValues<
-        Omit<SystemMenuApi.SystemMenu, 'children' | 'id'>
-      >();
+    const data = await formApi.getValues<Omit<SystemMenuApi.SystemMenu, 'children' | 'id'>>();
     if (data.type === 'link') {
-      data.meta = { ...data.meta, link: data.linkSrc };
+      data.meta = { ...data.meta, link: data.link_src };
     } else if (data.type === 'embedded') {
-      data.meta = { ...data.meta, iframeSrc: data.linkSrc };
+      data.meta = { ...data.meta, iframeSrc: data.link_src };
     }
-    delete data.linkSrc;
+    delete data.link_src;
 
     try {
-      await (formData.value?.id
-        ? updateMenu(formData.value.id, data)
-        : createMenu(data));
+      await (formData.value?.id ? updateMenu(formData.value.id, data) : createMenu(data));
       emit('success');
       drawerApi.close();
     } finally {
@@ -500,7 +489,7 @@ const getDrawerTitle = computed(() =>
 );
 </script>
 <template>
-  <Drawer class="w-full max-w-[800px]" :title="getDrawerTitle">
+  <Drawer class="w-full max-w-[50rem]" :title="getDrawerTitle">
     <Form class="mx-4" :layout="isHorizontal ? 'horizontal' : 'vertical'" />
   </Drawer>
 </template>

@@ -96,7 +96,7 @@ watch(
 
           <IconifyIcon
             icon="ant-design:close-circle-twotone"
-            class="size-6 hover:text-red-500 transition-colors"
+            class="size-6 hover:text-red-500 transition-colors mr-1"
             @click="handleRemove(file)"
           />
         </div>

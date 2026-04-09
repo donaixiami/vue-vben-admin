@@ -1,10 +1,7 @@
 <script lang="ts" setup>
 import type { Recordable } from '@vben/types';
 
-import type {
-  OnActionClickParams,
-  VxeTableGridOptions,
-} from '#/adapter/vxe-table';
+import type { OnActionClickParams, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { SystemUserApi } from '#/api';
 
 import { Page, useVbenDrawer } from '@vben/common-ui';
@@ -40,11 +37,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
         query: async ({ page }, formValues) => {
           const { created_at } = formValues;
           const params = formValues;
-          if (
-            created_at &&
-            Array.isArray(created_at) &&
-            created_at.length === 2
-          ) {
+          if (created_at && Array.isArray(created_at) && created_at.length === 2) {
             params.form_time = created_at[0];
             params.to_time = created_at[1];
           }
@@ -111,10 +104,7 @@ function confirm(content: string, title: string) {
  * @param row 行数据
  * @returns 返回false则中止改变，返回其他值（undefined、true）则允许改变
  */
-async function onStatusChange(
-  newStatus: number,
-  row: SystemUserApi.SystemUser,
-) {
+async function onStatusChange(newStatus: number, row: SystemUserApi.SystemUser) {
   const status: Recordable<string> = {
     0: '禁用',
     1: '启用',
@@ -147,7 +137,6 @@ function onDelete(row: SystemUserApi.SystemUser) {
       onRefresh();
     })
     .catch(() => {
-      // hideLoading();
       msg.close();
     });
 }
@@ -165,7 +154,7 @@ function onCreate() {
     <FormDrawer @success="onRefresh" />
     <div class="flex h-full gap-4">
       <div
-        class="bg-sidebar dark:bg-sidebar w-[300px] min-w-[280px] rounded-[var(--radius)]"
+        class="bg-sidebar dark:bg-sidebar w-[300px] min-w-[280px] rounded-[var(--radius)] border-color border-[1px]"
       ></div>
       <div class="flex-1">
         <Grid table-title="用户列表">

@@ -34,10 +34,7 @@ export function useFormSchema(
             return !(await isMenuIdentifierExists(value, formData.value?.id));
           },
           (value) => ({
-            message: $t('ui.formRules.alreadyExists', [
-              $t('system.menu.menuName'),
-              value,
-            ]),
+            message: $t('ui.formRules.alreadyExists', [$t('system.menu.menuName'), value]),
           }),
         ),
     },
@@ -148,6 +145,7 @@ export function useFormSchema(
       component: 'RadioGroup',
       componentProps: {
         buttonStyle: 'solid',
+        isButton: true,
         options: [
           { label: $t('common.enabled'), value: 1 },
           { label: $t('common.disabled'), value: 0 },
