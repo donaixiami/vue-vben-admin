@@ -120,6 +120,18 @@ const [Drawer, drawerApi] = useVbenDrawer({
     if (isOpen) {
       const data = drawerApi.getData<SystemUserApi.SystemUser>();
       formApi.resetForm();
+      if (data) {
+        formApi.setValues({
+          avatars: [
+            {
+              name: 'example.png',
+              status: 'done',
+              uid: '-1',
+              url: data?.avatar || '',
+            },
+          ],
+        });
+      }
 
       if (data) {
         formData.value = data;
