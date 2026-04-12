@@ -59,10 +59,7 @@ const schema: VbenFormSchema[] = [
           return !(await isMenuNameExists(value, formData.value?.id));
         },
         (value) => ({
-          message: $t('ui.formRules.alreadyExists', [
-            $t('system.menu.menuName'),
-            value,
-          ]),
+          message: $t('ui.formRules.alreadyExists', [$t('system.menu.menuName'), value]),
         }),
       ),
   },
@@ -82,6 +79,8 @@ const schema: VbenFormSchema[] = [
       getPopupContainer,
       labelField: 'meta.title',
       showSearch: true,
+      expandOnClickNode: false,
+      clearable: true,
       treeDefaultExpandAll: true,
       valueField: 'id',
       childrenField: 'children',
@@ -142,10 +141,7 @@ const schema: VbenFormSchema[] = [
           return !(await isMenuPathExists(value, formData.value?.id));
         },
         (value) => ({
-          message: $t('ui.formRules.alreadyExists', [
-            $t('system.menu.path'),
-            value,
-          ]),
+          message: $t('ui.formRules.alreadyExists', [$t('system.menu.path'), value]),
         }),
       ),
   },
@@ -458,9 +454,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
       if (data) {
         formData.value = data;
         formApi.setValues(formData.value);
-        titleSuffix.value = formData.value.meta?.title
-          ? $t(formData.value.meta.title)
-          : '';
+        titleSuffix.value = formData.value.meta?.title ? $t(formData.value.meta.title) : '';
       } else {
         formApi.resetForm();
         titleSuffix.value = '';
@@ -473,10 +467,7 @@ async function onSubmit() {
   const { valid } = await formApi.validate();
   if (valid) {
     drawerApi.lock();
-    const data =
-      await formApi.getValues<
-        Omit<SystemMenuApi.SystemMenu, 'children' | 'id'>
-      >();
+    const data = await formApi.getValues<Omit<SystemMenuApi.SystemMenu, 'children' | 'id'>>();
     if (data.type === 'link') {
       data.meta = { ...data.meta, link: data.link_src };
     } else if (data.type === 'embedded') {
@@ -485,9 +476,7 @@ async function onSubmit() {
     delete data.link_src;
 
     try {
-      await (formData.value?.id
-        ? updateMenu(formData.value.id, data)
-        : createMenu(data));
+      await (formData.value?.id ? updateMenu(formData.value.id, data) : createMenu(data));
       emit('success');
       drawerApi.close();
     } finally {
