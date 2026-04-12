@@ -8,7 +8,12 @@ import { AuthenticationLoginExpiredModal } from '@vben/common-ui';
 import { VBEN_DOC_URL, VBEN_GITHUB_URL } from '@vben/constants';
 import { useWatermark } from '@vben/hooks';
 import { BookOpenText, CircleHelp, SvgGithubIcon } from '@vben/icons';
-import { BasicLayout, LockScreen, Notification, UserDropdown } from '@vben/layouts';
+import {
+  BasicLayout,
+  LockScreen,
+  Notification,
+  UserDropdown,
+} from '@vben/layouts';
 import { preferences } from '@vben/preferences';
 import { useAccessStore, useUserStore } from '@vben/stores';
 import { openWindow } from '@vben/utils';
@@ -75,7 +80,9 @@ const userStore = useUserStore();
 const authStore = useAuthStore();
 const accessStore = useAccessStore();
 const { destroyWatermark, updateWatermark } = useWatermark();
-const showDot = computed(() => notifications.value.some((item) => !item.isRead));
+const showDot = computed(() =>
+  notifications.value.some((item) => !item.isRead),
+);
 
 const menus = computed(() => [
   {
@@ -148,7 +155,9 @@ watch(
   async ({ enable, content }) => {
     if (enable) {
       await updateWatermark({
-        content: content || `${userStore.userInfo?.username} - ${userStore.userInfo?.realName}`,
+        content:
+          content ||
+          `${userStore.userInfo?.username} - ${userStore.userInfo?.realName}`,
       });
     } else {
       destroyWatermark();
@@ -183,7 +192,10 @@ watch(
       />
     </template>
     <template #extra>
-      <AuthenticationLoginExpiredModal v-model:open="accessStore.loginExpired" :avatar>
+      <AuthenticationLoginExpiredModal
+        v-model:open="accessStore.loginExpired"
+        :avatar
+      >
         <LoginForm />
       </AuthenticationLoginExpiredModal>
     </template>
