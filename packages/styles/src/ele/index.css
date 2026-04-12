@@ -51,3 +51,7 @@ html .el-loading-mask {
 .border-color {
   border-color: hsl(var(--accent));
 }
+
+.el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content {
+  background-color: var(--tree-item-active-background-color) !important;
+}
