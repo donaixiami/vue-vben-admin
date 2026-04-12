@@ -12,6 +12,8 @@ import { ElIcon, ElImage, ElMessage, ElUpload } from 'element-plus';
 
 import { setUploadOss } from '#/api/system/file';
 
+const emit = defineEmits(['success']);
+
 const fileList = ref<UploadFile[]>([]);
 const [Modal, modalApi] = useVbenModal({
   // 取消上传
@@ -29,6 +31,7 @@ const [Modal, modalApi] = useVbenModal({
     });
     modalApi.unlock();
     modalApi.close();
+    emit('success');
   },
   onOpened() {
     console.log(4);
