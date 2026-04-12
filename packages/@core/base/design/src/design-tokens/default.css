@@ -101,6 +101,9 @@
   --sidebar: 0 0% 100%;
   --sidebar-deep: 0 0% 100%;
   --menu: var(--sidebar);
+  /* tree */
+  --tree-item-active-color: hsl(var(--primary));
+  --tree-item-active-background-color: hsl(var(--primary) / 15%);
 
   /* header */
   --header: 0 0% 100%;
@@ -183,6 +186,8 @@
   --sidebar: 0 0% 100%;
   --sidebar-deep: 0 0% 100%;
   --menu: var(--sidebar);
+  --menu-item-active-color: hsl(var(--primary));
+  --menu-item-active-background-color: hsl(var(--primary) / 15%);
 
   /* header */
   --header: 0 0% 100%;
