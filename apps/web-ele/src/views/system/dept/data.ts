@@ -22,6 +22,7 @@ export function useSchema(): VbenFormSchema[] {
         labelField: 'name',
         valueField: 'id',
         childrenField: 'children',
+        checkStrictly: true,
       },
       fieldName: 'pid',
       label: $t('system.dept.parentDept'),
@@ -33,30 +34,24 @@ export function useSchema(): VbenFormSchema[] {
       rules: z
         .string()
         .min(2, $t('ui.formRules.minLength', [$t('system.dept.deptName'), 2]))
-        .max(
-          20,
-          $t('ui.formRules.maxLength', [$t('system.dept.deptName'), 20]),
-        ),
+        .max(20, $t('ui.formRules.maxLength', [$t('system.dept.deptName'), 20])),
     },
     {
       component: 'Input',
       fieldName: 'manager',
       label: '部门负责人',
-      rules: z
-        .string()
-        .min(3, '负责人姓名至少3个字符')
-        .max(10, '负责人姓名最多10个字符'),
+      rules: z.string().min(3, '负责人姓名至少3个字符').max(10, '负责人姓名最多10个字符'),
     },
     {
       component: 'Input',
       fieldName: 'phone',
       label: '联系电话',
-      rules: z
-        .string()
-        .regex(
-          /^(?:(?:\+|00)86)?1(?:3\d|4[5-79]|5[0-35-9]|6[5-7]|7[0-8]|8\d|9[1589])\d{8}$/,
-          '请输入正确的联系电话',
-        ),
+      // rules: z
+      //   .string()
+      //   .regex(
+      //     /^(?:(?:\+|00)86)?1(?:3\d|4[5-79]|5[0-35-9]|6[5-7]|7[0-8]|8\d|9[1589])\d{8}$/,
+      //     '请输入正确的联系电话',
+      //   ),
     },
     {
       component: 'Input',
