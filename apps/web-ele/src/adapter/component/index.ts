@@ -325,6 +325,7 @@ async function initComponentAdapter() {
       );
     },
     TreeSelect: withDefaultPlaceholder(ElTreeSelect, 'select'),
+    // :on-preview="handlePictureCardPreview"
     Upload: (props, { attrs, slots }) => {
       const finalProps: Recordable<any> = { ...props, ...attrs };
       if (finalProps.customRequest && !finalProps.httpRequest) {
