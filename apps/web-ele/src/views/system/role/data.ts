@@ -2,6 +2,7 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { SystemRoleApi } from '#/api';
 
+import { z } from '#/adapter/form';
 import { $t } from '#/locales';
 
 export function useFormSchema(): VbenFormSchema[] {
@@ -11,6 +12,16 @@ export function useFormSchema(): VbenFormSchema[] {
       fieldName: 'name',
       label: $t('system.role.roleName'),
       rules: 'required',
+    },
+    {
+      component: 'Input',
+      fieldName: 'role_key',
+      label: '权限字段',
+      // 正则表达式校验，只能包含字母、数字和下划线
+      rules: z
+        .string()
+        .min(1, '权限字段不能为空')
+        .regex(/^[a-zA-Z0-9_]+$/, '权限字段只能包含字母、数字和下划线'),
     },
     {
       component: 'RadioGroup',
