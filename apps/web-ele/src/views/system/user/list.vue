@@ -1,23 +1,21 @@
 <script lang="ts" setup>
 import type { Recordable } from '@vben/types';
 
-import type {
-  OnActionClickParams,
-  VxeTableGridOptions,
-} from '#/adapter/vxe-table';
-import type { SystemUserApi } from '#/api';
+import type { OnActionClickParams, VxeTableGridOptions } from '#/adapter/vxe-table';
+import type { SystemUserApi } from '#/api/system/user';
 
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { Plus } from '@vben/icons';
 
-import { ElButton, ElMessage } from 'element-plus';
+import { ElButton, ElMessage, ElMessageBox } from 'element-plus';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { deleteUser, getUserList, updateUser } from '#/api';
+import { deleteUser, getUserList, updateUserStatus } from '#/api/system/user';
 import { $t } from '#/locales';
 
 import { useColumns, useGridFormSchema } from './data';
 import Form from './modules/form.vue';
+import Tree from './modules/tree.vue';
 
 const [FormDrawer, formDrawerApi] = useVbenDrawer({
   connectedComponent: Form,
@@ -36,15 +34,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
     keepSource: true,
     showOverflow: false,
     proxyConfig: {
+      autoLoad: false,
       ajax: {
         query: async ({ page }, formValues) => {
           const { created_at } = formValues;
           const params = formValues;
-          if (
-            created_at &&
-            Array.isArray(created_at) &&
-            created_at.length === 2
-          ) {
+          if (created_at && Array.isArray(created_at) && created_at.length === 2) {
             params.form_time = created_at[0];
             params.to_time = created_at[1];
           }
@@ -70,7 +65,6 @@ const [Grid, gridApi] = useVbenVxeGrid({
     },
   } as VxeTableGridOptions<SystemUserApi.SystemUser>,
 });
-
 function onActionClick(e: OnActionClickParams<SystemUserApi.SystemUser>) {
   switch (e.code) {
     case 'delete': {
@@ -90,18 +84,11 @@ function onActionClick(e: OnActionClickParams<SystemUserApi.SystemUser>) {
  * @param title 提示标题
  */
 function confirm(content: string, title: string) {
-  return new Promise((reslove, reject) => {
-    console.log('::: confirm', content, title);
-    // Modal.confirm({
-    //   content,
-    //   onCancel() {
-    //     reject(new Error('已取消'));
-    //   },
-    //   onOk() {
-    //     reslove(true);
-    //   },
-    //   title,
-    // });
+  console.log('content:::', content);
+  return ElMessageBox.confirm(content, title, {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning',
   });
 }
 
@@ -111,20 +98,17 @@ function confirm(content: string, title: string) {
  * @param row 行数据
  * @returns 返回false则中止改变，返回其他值（undefined、true）则允许改变
  */
-async function onStatusChange(
-  newStatus: number,
-  row: SystemUserApi.SystemUser,
-) {
+async function onStatusChange(newStatus: number, row: SystemUserApi.SystemUser) {
   const status: Recordable<string> = {
     0: '禁用',
     1: '启用',
   };
   try {
     await confirm(
-      `你要将${row.name}的状态切换为 【${status[newStatus.toString()]}】 吗？`,
+      `你要将${row.username}的状态切换为 【${status[newStatus.toString()]}】 吗？`,
       `切换状态`,
     );
-    await updateUser(row.id, { status: newStatus });
+    await updateUserStatus(row.id, { status: +newStatus as 0 | 1 });
     return true;
   } catch {
     return false;
@@ -165,7 +149,9 @@ function onCreate() {
     <div class="flex h-full gap-4">
       <div
         class="bg-sidebar dark:bg-sidebar w-[300px] min-w-[280px] rounded-[var(--radius)] border-color border-[1px]"
-      ></div>
+      >
+        <Tree :grid-api="gridApi" />
+      </div>
       <div class="flex-1">
         <Grid table-title="用户列表">
           <template #toolbar-tools>
