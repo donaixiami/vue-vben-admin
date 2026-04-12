@@ -10,6 +10,14 @@ export namespace SystemRoleApi {
     name: string;
     /** 状态 */
     status: 0 | 1;
+    /** 父角色 ID */
+    pid?: string;
+    /** 角色路径 */
+    path?: string;
+    /** 角色等级 */
+    level?: number;
+    /** 角色描述 */
+    description?: string;
     /** 权限列表 */
     permissions: string[];
     /** 备注 */
@@ -25,10 +33,7 @@ export namespace SystemRoleApi {
  * 获取角色列表数据
  */
 async function getRoleList(params: Recordable<any>) {
-  return requestClient.get<Array<SystemRoleApi.SystemRole>>(
-    '/system/role/list',
-    { params },
-  );
+  return requestClient.get<Array<SystemRoleApi.SystemRole>>('/system/role/list', { params });
 }
 
 /**
@@ -45,10 +50,7 @@ async function createRole(data: Omit<SystemRoleApi.SystemRole, 'id'>) {
  * @param id 角色 ID
  * @param data 角色数据
  */
-async function updateRole(
-  id: string,
-  data: Omit<SystemRoleApi.SystemRole, 'id'>,
-) {
+async function updateRole(id: string, data: Omit<SystemRoleApi.SystemRole, 'id'>) {
   return requestClient.put(`/system/role/${id}`, data);
 }
 
