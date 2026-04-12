@@ -26,10 +26,7 @@ export const useAuthStore = defineStore('auth', () => {
    * @param params 登录表单数据
    * @param onSuccess 成功之后的回调函数
    */
-  async function authLogin(
-    params: Recordable<any>,
-    onSuccess?: () => Promise<void> | void,
-  ) {
+  async function authLogin(params: Recordable<any>, onSuccess?: () => Promise<void> | void) {
     // 异步处理用户登录操作并获取 accessToken
     let userInfo: null | UserInfo = null;
     try {
@@ -45,6 +42,7 @@ export const useAuthStore = defineStore('auth', () => {
           fetchUserInfo(),
           getAccessCodesApi(),
         ]);
+        console.log('accessCodes:::', accessCodes);
 
         userInfo = fetchUserInfoResult;
 
@@ -56,9 +54,7 @@ export const useAuthStore = defineStore('auth', () => {
         } else {
           onSuccess
             ? await onSuccess?.()
-            : await router.push(
-                userInfo.homePath || preferences.app.defaultHomePath,
-              );
+            : await router.push(userInfo.homePath || preferences.app.defaultHomePath);
         }
 
         if (userInfo?.realName) {
