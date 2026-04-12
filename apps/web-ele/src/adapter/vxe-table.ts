@@ -104,6 +104,7 @@ setupVbenVxeTable({
           ...props,
           modelValue: row[column.field],
           loading: row[loadingKey] ?? false,
+          disabled: isFunction(attrs?.disabled) ? attrs.disabled(row) : attrs?.disabled,
           'onUpdate:modelValue': onChange,
         };
         async function onChange(newVal: any) {
