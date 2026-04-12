@@ -100,6 +100,9 @@
   --sidebar: 222.34deg 10.43% 12.27%;
   --sidebar-deep: 220deg 13.06% 9%;
   --menu: var(--sidebar);
+  /* tree */
+  --tree-item-active-color: hsl(var(--accent-foreground));
+  --tree-item-active-background-color: hsl(var(--accent));
 
   /* header */
   --header: 222.34deg 10.43% 12.27%;
