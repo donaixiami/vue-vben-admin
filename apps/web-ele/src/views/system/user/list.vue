@@ -84,7 +84,6 @@ function onActionClick(e: OnActionClickParams<SystemUserApi.SystemUser>) {
  * @param title 提示标题
  */
 function confirm(content: string, title: string) {
-  console.log('content:::', content);
   return ElMessageBox.confirm(content, title, {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
@@ -130,7 +129,7 @@ function onDelete(row: SystemUserApi.SystemUser) {
       ElMessage.success($t('ui.actionMessage.deleteSuccess', [row.name]));
       onRefresh();
     })
-    .catch(() => {
+    .finally(() => {
       msg.close();
     });
 }
