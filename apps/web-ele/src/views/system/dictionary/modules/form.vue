@@ -11,7 +11,7 @@ import { IconifyIcon } from '@vben/icons';
 // import { Spin } from 'ant-design-vue';
 import { useVbenForm } from '#/adapter/form';
 import { createDictionary, updateDictionary } from '#/api';
-import { getMenuList } from '#/api/system/menu';
+import { getMenuTree } from '#/api/system/menu';
 import { $t } from '#/locales';
 
 import { useFormSchema } from '../data';
@@ -93,7 +93,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
 async function loadPermissions() {
   loadingPermissions.value = true;
   try {
-    const res = await getMenuList();
+    const res = await getMenuTree();
     permissions.value = res as unknown as any[];
   } finally {
     loadingPermissions.value = false;

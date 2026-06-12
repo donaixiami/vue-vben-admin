@@ -10,7 +10,7 @@ import { MenuBadge } from '@vben-core/menu-ui';
 import { ElButton, ElMessage } from 'element-plus';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { deleteMenu, getMenuList_1, SystemMenuApi } from '#/api/system/menu';
+import { deleteMenu, getMenuList, SystemMenuApi } from '#/api/system/menu';
 
 import { useColumns } from './data';
 import Form from './modules/form.vue';
@@ -32,7 +32,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       ajax: {
         query: async (_params) => {
           // 确保返回的数据格式为 vxe-table 所需的 { records: [] }
-          const data = await getMenuList_1();
+          const data = await getMenuList();
           // 如果接口直接返回数组，则包装成 items 字段
           return Array.isArray(data) ? { items: data } : data;
         },
