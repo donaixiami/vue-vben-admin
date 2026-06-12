@@ -6,10 +6,26 @@ export namespace SystemArticleApi {
   export interface SystemArticle {
     [key: string]: any;
     id: string;
-    name: string;
-    permissions: string[];
-    remark?: string;
+    /** 文章标题 */
+    title: string;
+    /** 副标题 */
+    sub_title?: string;
+    /** 封面图片URL */
+    cover?: string;
+    /** 文章类型/分类 */
+    type?: string;
+    /** 文章内容 */
+    content: string;
+    /** 是否显示: 0-否, 1-是 */
+    evidently?: 0 | 1;
+    /** 状态: 0-禁用, 1-启用 */
     status: 0 | 1;
+    /** 创建者ID */
+    creator_id?: number;
+    /** 创建时间 */
+    created_at?: string;
+    /** 更新时间 */
+    updated_at?: string;
   }
 }
 
