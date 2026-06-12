@@ -30,9 +30,11 @@ export function useFormSchema(): VbenFormSchema[] {
       component: 'ApiSelect',
       componentProps: {
         api: getCategoryTypeList,
-        fieldNames: {
-          label: 'name',
-          value: 'name',
+        afterFetch: (data: any[]) => {
+          return data.map((item: any) => ({
+            label: item.name,
+            value: item.name,
+          }));
         },
         placeholder: '请选择文章分类',
       },
