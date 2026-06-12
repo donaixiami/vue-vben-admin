@@ -3,7 +3,7 @@ import { ref } from 'vue';
 
 import { Page } from '@vben/common-ui';
 
-import { ElMessage } from 'element-plus';
+import { ElButton, ElMessage } from 'element-plus';
 
 import { useVbenForm } from '#/adapter/form';
 import { createArticle } from '#/api/article-manage/article-list';
@@ -25,17 +25,23 @@ const loading = ref(false);
 
 async function handleSubmit() {
   const { valid, values } = await formApi.validate();
+
   if (!valid) {
+    ElMessage.warning('请检查表单填写是否完整');
     return;
   }
 
   loading.value = true;
   try {
-    await createArticle(values as any);
+    const result = await createArticle(values as any);
+    console.log('文章创建成功:', result);
     ElMessage.success('文章发布成功！');
-    formApi.resetForm();
+    // 重置表单
+    await formApi.resetForm();
   } catch (error: any) {
-    ElMessage.error(error?.message || '文章发布失败，请重试');
+    console.error('文章发布失败:', error);
+    const errorMsg = error?.response?.data?.message || error?.message || '文章发布失败，请重试';
+    ElMessage.error(errorMsg);
   } finally {
     loading.value = false;
   }
@@ -59,17 +65,22 @@ function handleReset() {
         <Form>
           <template #submitButton>
             <div class="mt-6 flex gap-3">
-              <el-button
+              <ElButton
                 type="primary"
                 size="large"
                 :loading="loading"
+                :disabled="loading"
                 @click="handleSubmit"
               >
                 {{ loading ? '发布中...' : '发布文章' }}
-              </el-button>
-              <el-button size="large" @click="handleReset">
+              </ElButton>
+              <ElButton
+                size="large"
+                :disabled="loading"
+                @click="handleReset"
+              >
                 重置
-              </el-button>
+              </ElButton>
             </div>
           </template>
         </Form>
