@@ -1,17 +1,12 @@
 <script lang="ts" setup>
-import type { Recordable } from '@vben/types';
-
 import type { SystemDictionaryApi } from '#/api';
 
 import { computed, nextTick, ref } from 'vue';
 
-import { Tree, useVbenDrawer, useVbenModal } from '@vben/common-ui';
-import { IconifyIcon } from '@vben/icons';
+import { useVbenDrawer, useVbenModal } from '@vben/common-ui';
 
-// import { Spin } from 'ant-design-vue';
 import { useVbenForm } from '#/adapter/form';
 import { createDictionary, updateDictionary } from '#/api';
-import { getMenuTree } from '#/api/system/menu';
 import { $t } from '#/locales';
 
 import { useFormSchema } from '../data';
@@ -29,9 +24,6 @@ const [Form, formApi] = useVbenForm({
   schema: useFormSchema(formData, { modalApi: valueModalApi }),
   showDefaultActions: false,
 });
-
-const permissions = ref<any[]>([]);
-const loadingPermissions = ref(false);
 
 const id = ref();
 const [Drawer, drawerApi] = useVbenDrawer({
@@ -79,9 +71,6 @@ const [Drawer, drawerApi] = useVbenDrawer({
         id.value = undefined;
       }
 
-      if (permissions.value.length === 0) {
-        await loadPermissions();
-      }
       await nextTick();
       if (dataObject) {
         formApi.setValues(dataObject);
@@ -90,30 +79,12 @@ const [Drawer, drawerApi] = useVbenDrawer({
   },
 });
 
-async function loadPermissions() {
-  loadingPermissions.value = true;
-  try {
-    const res = await getMenuTree();
-    permissions.value = res as unknown as any[];
-  } finally {
-    loadingPermissions.value = false;
-  }
-}
-
 const getDrawerTitle = computed(() => {
   return formData.value?.id
     ? $t('common.edit', '字典')
     : $t('common.create', '字典');
 });
 
-function getNodeClass(node: Recordable<any>) {
-  const classes: string[] = [];
-  if (node.value?.type === 'button') {
-    classes.push('inline-flex');
-  }
-
-  return classes.join(' ');
-}
 function valueModalSubmit(params: { label: string; value: string }[]) {
   formApi.setFieldValue('valueList', Object.values(params));
   formApi.setFieldValue('default_value', undefined);
@@ -121,43 +92,7 @@ function valueModalSubmit(params: { label: string; value: string }[]) {
 </script>
 <template>
   <Drawer :title="getDrawerTitle">
-    <Form>
-      <template #permissions="slotProps">
-        <Tree
-          :tree-data="permissions"
-          multiple
-          bordered
-          :default-expanded-level="2"
-          :get-node-class="getNodeClass"
-          v-bind="slotProps"
-          value-field="id"
-          label-field="meta.title"
-          icon-field="meta.icon"
-        >
-          <template #node="{ value }">
-            <IconifyIcon v-if="value.meta.icon" :icon="value.meta.icon" />
-            {{ $t(value.meta.title) }}
-          </template>
-        </Tree>
-      </template>
-    </Form>
+    <Form />
     <ValueModal @submit="valueModalSubmit" />
   </Drawer>
 </template>
-<style lang="css" scoped>
-:deep(.ant-tree-title) {
-  .tree-actions {
-    display: none;
-    margin-left: 20px;
-  }
-}
-
-:deep(.ant-tree-title:hover) {
-  .tree-actions {
-    display: flex;
-    flex: auto;
-    justify-content: flex-end;
-    margin-left: 20px;
-  }
-}
-</style>
