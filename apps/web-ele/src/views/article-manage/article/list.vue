@@ -10,10 +10,10 @@ import type { SystemArticleApi } from '#/api';
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { Plus } from '@vben/icons';
 
-import { ElButton } from 'element-plus';
+import { ElButton, ElMessage, ElMessageBox } from 'element-plus';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getArticleList, updateArticle } from '#/api';
+import { deleteArticle, getArticleList, updateArticle } from '#/api';
 import { $t } from '#/locales';
 
 import { useColumns, useGridFormSchema } from './data';
@@ -135,22 +135,35 @@ function onEdit(row: SystemArticleApi.SystemArticle) {
 }
 
 function onDelete(row: SystemArticleApi.SystemArticle) {
-  // const hideLoading = message.loading({
-  //   content: $t('ui.actionMessage.deleting', [row.name]),
-  //   duration: 0,
-  //   key: 'action_process_msg',
-  // });
-  // deleteArticle(row.id)
-  //   .then(() => {
-  //     message.success({
-  //       content: $t('ui.actionMessage.deleteSuccess', [row.name]),
-  //       key: 'action_process_msg',
-  //     });
-  //     onRefresh();
-  //   })
-  //   .catch(() => {
-  //     hideLoading();
-  //   });
+  ElMessageBox.confirm(
+    `确定要删除文章"${row.title}"吗？此操作不可恢复！`,
+    '删除确认',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    },
+  )
+    .then(async () => {
+      const loading = ElMessage({
+        message: `正在删除"${row.title}"...`,
+        duration: 0,
+      });
+      try {
+        await deleteArticle(row.id);
+        loading.close();
+        ElMessage.success(`文章"${row.title}"删除成功！`);
+        onRefresh();
+      } catch (error: any) {
+        loading.close();
+        ElMessage.error(
+          error?.response?.data?.message || error?.message || '删除失败，请重试',
+        );
+      }
+    })
+    .catch(() => {
+      // 用户取消删除
+    });
 }
 
 function onRefresh() {
