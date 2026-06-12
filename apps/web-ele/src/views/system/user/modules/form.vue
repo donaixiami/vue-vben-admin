@@ -1,8 +1,7 @@
 <script lang="ts" setup>
-import type { Recordable } from '@vben/types';
-
 import type { VbenFormSchema } from '#/adapter/form';
 import type { SystemDeptApi } from '#/api/system/dept';
+import type { SystemRoleApi } from '#/api/system/role';
 import type { SystemUserApi } from '#/api/system/user';
 
 import { computed, h, nextTick, ref } from 'vue';
@@ -16,11 +15,13 @@ import { z } from '#/adapter/form';
 import { useVbenForm } from '#/adapter/form';
 import { upload_file } from '#/api/common/upload';
 import { getDeptList } from '#/api/system/dept';
+import { getRoleList } from '#/api/system/role';
 import { createUser, updateUser } from '#/api/system/user';
 import { $t } from '#/locales';
 const emits = defineEmits(['success']);
 
 const formData = ref<SystemUserApi.SystemUser>();
+const id = ref();
 
 const [Form, formApi] = useVbenForm({
   schema: useFormSchema(),
@@ -128,7 +129,50 @@ function useFormSchema(): VbenFormSchema[] {
       label: '部门',
       renderComponentContent() {
         return {
-          title({ label }: { label: string; meta: Recordable<SystemDeptApi.SystemDept> }) {
+          title({ label }: { label: string }) {
+            const coms = [];
+            if (!label) return '';
+            coms.push(h('span', { class: '' }, $t(label || '')));
+            return h('div', {}, coms);
+          },
+        };
+      },
+    },
+    {
+      rules: 'required',
+      component: 'ApiTreeSelect',
+      componentProps: {
+        api: getRoleList,
+        // afterFetch: (res: any) => {
+        //   // 如果数据多了一层，例如 res.items 或 res.list，在这里把它剥离出来返回给组件
+        //   // 具体取决于你 getRoleList 的返回结构，比如 return res.items || res
+        //   return res?.items || res?.list || res;
+        // },
+        resultField: 'items',
+        class: 'w-full',
+        filterTreeNode(input: string, node: SystemRoleApi.SystemRole) {
+          if (!input || input.length === 0) {
+            return true;
+          }
+          const title: string = node?.name ?? '';
+          if (!title) return false;
+          return title.includes(input) || $t(title).includes(input);
+        },
+        getPopupContainer,
+        labelField: 'name',
+        highlightCurrent: true,
+        checkStrictly: true,
+        clearable: true,
+        multiple: true,
+        valueField: 'id',
+        childrenField: 'children',
+        nodeKey: 'role_key',
+      },
+      fieldName: 'roles',
+      label: '角色',
+      renderComponentContent() {
+        return {
+          title({ label }: { label: string }) {
             const coms = [];
             if (!label) return '';
             coms.push(h('span', { class: '' }, $t(label || '')));
@@ -211,7 +255,6 @@ function useFormSchema(): VbenFormSchema[] {
   ];
 }
 
-const id = ref();
 const [Drawer, drawerApi] = useVbenDrawer({
   async onConfirm() {
     const { valid } = await formApi.validate();

@@ -18,6 +18,8 @@ export namespace SystemRoleApi {
     level?: number;
     /** 角色描述 */
     description?: string;
+    /** 权限字段 */
+    role_key: string;
     /** 权限列表 */
     permissions: string[];
     /** 备注 */
