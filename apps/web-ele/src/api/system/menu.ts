@@ -83,16 +83,24 @@ export namespace SystemMenuApi {
 }
 
 /**
- * 获取菜单数据列表
+ * 获取树形菜单列表（用于权限分配等）
  */
-async function getMenuList() {
+async function getMenuTree() {
   return requestClient.get<Array<SystemMenuApi.SystemMenu>>('/system/menu/all');
 }
+
 /**
- * 获取菜单数据列表
+ * 获取菜单列表（用于菜单管理页面）
  */
-async function getMenuList_1() {
+async function getMenuList() {
   return requestClient.get<Array<SystemMenuApi.SystemMenu>>('/system/menu/list');
+}
+
+/**
+ * 获取全量树形菜单数据
+ */
+async function getMenuTreeData() {
+  return requestClient.get<Array<SystemMenuApi.SystemMenu>>('/system/menu/tree');
 }
 
 async function isMenuNameExists(name: string, id?: SystemMenuApi.SystemMenu['id']) {
@@ -137,7 +145,8 @@ export {
   createMenu,
   deleteMenu,
   getMenuList,
-  getMenuList_1,
+  getMenuTree,
+  getMenuTreeData,
   isMenuNameExists,
   isMenuPathExists,
   updateMenu,
