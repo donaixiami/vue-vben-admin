@@ -107,7 +107,7 @@ const schema: VbenFormSchema[] = [
       // 不需要处理多语言时就无需这么做
       return {
         addonAfter: titleSuffix.value,
-        onChange({ target: { value } }: any) {
+        onChange(value: any) {
           titleSuffix.value = value && $te(value) ? $t(value) : undefined;
         },
       };
@@ -246,6 +246,7 @@ const schema: VbenFormSchema[] = [
     },
     fieldName: 'auth_code',
     label: $t('system.menu.authCode'),
+    // rules: 'required',
   },
   {
     component: 'RadioGroup',

@@ -1,8 +1,5 @@
 <script lang="ts" setup>
-import type {
-  OnActionClickParams,
-  VxeTableGridOptions,
-} from '#/adapter/vxe-table';
+import type { OnActionClickParams, VxeTableGridOptions } from '#/adapter/vxe-table';
 
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { IconifyIcon, Plus } from '@vben/icons';
@@ -13,7 +10,7 @@ import { MenuBadge } from '@vben-core/menu-ui';
 import { ElButton, ElMessage } from 'element-plus';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { deleteMenu, getMenuList, SystemMenuApi } from '#/api/system/menu';
+import { deleteMenu, getMenuList_1, SystemMenuApi } from '#/api/system/menu';
 
 import { useColumns } from './data';
 import Form from './modules/form.vue';
@@ -35,7 +32,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       ajax: {
         query: async (_params) => {
           // 确保返回的数据格式为 vxe-table 所需的 { records: [] }
-          const data = await getMenuList();
+          const data = await getMenuList_1();
           // 如果接口直接返回数组，则包装成 items 字段
           return Array.isArray(data) ? { items: data } : data;
         },
@@ -58,10 +55,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
   } as VxeTableGridOptions,
 });
 
-function onActionClick({
-  code,
-  row,
-}: OnActionClickParams<SystemMenuApi.SystemMenu>) {
+function onActionClick({ code, row }: OnActionClickParams<SystemMenuApi.SystemMenu>) {
   switch (code) {
     case 'append': {
       onAppend(row);
@@ -124,11 +118,7 @@ function onDelete(row: SystemMenuApi.SystemMenu) {
       <template #title="{ row }">
         <div class="flex w-full items-center gap-1">
           <div class="size-5 flex-shrink-0">
-            <IconifyIcon
-              v-if="row.type === 'button'"
-              icon="carbon:security"
-              class="size-full"
-            />
+            <IconifyIcon v-if="row.type === 'button'" icon="carbon:security" class="size-full" />
             <IconifyIcon
               v-else-if="row.meta?.icon"
               :icon="row.meta?.icon || 'carbon:circle-dash'"
