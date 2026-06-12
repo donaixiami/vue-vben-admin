@@ -43,45 +43,53 @@ export namespace SystemUserApi {
 }
 
 /**
- * 获取角色列表数据
+ * 获取用户列表数据
  */
 async function getUserList(params: Recordable<any>) {
   return requestClient.get<Array<SystemUserApi.SystemUser>>('/system/user/list', { params });
 }
 
 /**
- * 创建角色
- * @param data 角色数据
+ * 根据ID获取用户信息
+ * @param id 用户 ID
+ */
+async function getUserById(id: string) {
+  return requestClient.get<SystemUserApi.SystemUser>(`/system/user/${id}`);
+}
+
+/**
+ * 创建用户
+ * @param data 用户数据
  */
 async function createUser(data: Omit<SystemUserApi.SystemUser, 'id'>) {
   return requestClient.post('/system/user', data);
 }
 
 /**
- * 更新角色
+ * 更新用户
  *
- * @param id 角色 ID
- * @param data 角色数据
+ * @param id 用户 ID
+ * @param data 用户数据
  */
 async function updateUser(id: string, data: Omit<SystemUserApi.SystemUser, 'id'>) {
   return requestClient.put(`/system/user/${id}`, data);
 }
 /**
- * 更新角色状态
+ * 更新用户状态
  *
- * @param id 角色 ID
- * @param data 角色状态数据
+ * @param id 用户 ID
+ * @param data 用户状态数据
  */
 async function updateUserStatus(id: string, data: SystemUserApi.UpdateUserStatusDto) {
   return requestClient.put(`/system/user/status/${id}`, data);
 }
 
 /**
- * 删除角色
- * @param id 角色 ID
+ * 删除用户
+ * @param id 用户 ID
  */
 async function deleteUser(id: string) {
   return requestClient.delete(`/system/user/${id}`);
 }
 
-export { createUser, deleteUser, getUserList, updateUser, updateUserStatus };
+export { createUser, deleteUser, getUserById, getUserList, updateUser, updateUserStatus };

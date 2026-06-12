@@ -30,7 +30,7 @@ async function isMenuIdentifierExists(
 }
 
 /**
- * 获取角色列表数据
+ * 获取字典列表数据
  */
 async function getDictionaryList(params: Recordable<any>) {
   return requestClient.get<Array<SystemDictionaryApi.SystemDictionary>>(
@@ -40,8 +40,8 @@ async function getDictionaryList(params: Recordable<any>) {
 }
 
 /**
- * 创建角色
- * @param data 角色数据
+ * 创建字典
+ * @param data 字典数据
  */
 async function createDictionary(
   data: Omit<SystemDictionaryApi.SystemDictionary, 'id'>,
@@ -50,10 +50,10 @@ async function createDictionary(
 }
 
 /**
- * 更新角色
+ * 更新字典
  *
- * @param id 角色 ID
- * @param data 角色数据
+ * @param id 字典 ID
+ * @param data 字典数据
  */
 async function updateDictionary(
   id: string,
@@ -63,8 +63,8 @@ async function updateDictionary(
 }
 
 /**
- * 删除角色
- * @param id 角色 ID
+ * 删除字典
+ * @param id 字典 ID
  */
 async function deleteDictionary(id: string) {
   return requestClient.delete(`/system/dictionary/${id}`);
