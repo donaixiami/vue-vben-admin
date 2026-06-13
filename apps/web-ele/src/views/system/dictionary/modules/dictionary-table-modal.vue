@@ -2,9 +2,28 @@
 import { ref } from 'vue';
 
 import { useVbenModal } from '@vben/common-ui';
-import { IconifyIcon } from '@vben/icons';
+import { Plus } from '@vben/icons';
+
+import { ElButton } from 'element-plus';
+
+import { useVbenVxeGrid } from '#/adapter/vxe-table';
+
+import { useColumns } from './dictionary-table-modal-data';
 
 const emits = defineEmits(['submit']);
+
+const [Grid, gridApi] = useVbenVxeGrid({
+  gridOptions: {
+    columns: useColumns(),
+    rowConfig: {
+      keyField: 'id',
+      drag: true,
+    },
+    pagerConfig: {
+      enabled: false,
+    },
+  },
+});
 
 interface DataList {
   label: string;
@@ -67,67 +86,13 @@ const [Modal, modalApi] = useVbenModal({
 </script>
 <template>
   <Modal title="设置列表">
-    <AForm
-      ref="formRef"
-      name="dynamic_form_nest_item"
-      :model="dynamicValidateForm"
-    >
-      <div
-        v-for="(user, index) in dynamicValidateForm"
-        :key="user.id"
-        class="flex gap-4"
-      >
-        <AFormItem
-          class="flex-1"
-          :name="[index, 'value']"
-          :rules="[
-            {
-              required: true,
-              message: '请填写键',
-            },
-            {
-              async validator(_: any, value: any) {
-                const labels = dynamicValidateForm
-                  .map((item) => item.value)
-                  .filter((v) => v !== undefined && v !== null && v !== '');
-
-                const count = labels.filter((v) => v === value).length;
-
-                if (count > 1) {
-                  throw new Error('键值不能重复');
-                }
-              },
-              trigger: ['change', 'blur'],
-            },
-          ]"
-        >
-          <AInput v-model:value="user.value" placeholder="键" />
-        </AFormItem>
-
-        <AFormItem
-          class="flex-1"
-          :name="[index, 'label']"
-          :rules="{
-            required: true,
-            message: '请填写值',
-          }"
-        >
-          <AInput v-model:value="user.label" placeholder="值" />
-        </AFormItem>
-        <div
-          class="flex h-8 items-center justify-center"
-          v-if="dynamicValidateForm.length > 1"
-        >
-          <IconifyIcon
-            icon="carbon:close-outline"
-            class="size-5 cursor-pointer transition-all hover:text-red-500"
-            @click="removeUser(user)"
-          />
-        </div>
-      </div>
-      <AFormItem>
-        <AButton type="dashed" block @click="addUser"> + 添加 </AButton>
-      </AFormItem>
-    </AForm>
+    <Grid table-title="用户列表">
+      <template #toolbar-tools>
+        <ElButton type="primary">
+          <Plus class="size-5" />
+          添加键值
+        </ElButton>
+      </template>
+    </Grid>
   </Modal>
 </template>
