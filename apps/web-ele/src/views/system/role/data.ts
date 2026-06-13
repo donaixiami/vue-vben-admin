@@ -103,6 +103,7 @@ export function useColumns<T = SystemRoleApi.SystemRole>(
       field: 'name',
       title: $t('system.role.roleName'),
       width: 200,
+      dragSort: true,
     },
     {
       field: 'id',
