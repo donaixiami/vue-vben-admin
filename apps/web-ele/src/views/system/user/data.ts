@@ -54,6 +54,7 @@ export function useColumns<T = SystemRoleApi.SystemRole>(
 ): VxeTableGridOptions['columns'] {
   return [
     {
+      cellRender: { name: 'CellDragSort' },
       field: 'id',
       title: $t('system.role.id'),
       width: 80,
