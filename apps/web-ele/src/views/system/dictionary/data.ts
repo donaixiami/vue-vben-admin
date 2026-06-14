@@ -34,10 +34,7 @@ export function useFormSchema(
             return !(await isMenuIdentifierExists(value, formData.value?.id));
           },
           (value) => ({
-            message: $t('ui.formRules.alreadyExists', [
-              $t('system.menu.menuName'),
-              value,
-            ]),
+            message: $t('ui.formRules.alreadyExists', [$t('system.menu.menuName'), value]),
           }),
         ),
     },
@@ -113,13 +110,13 @@ export function useFormSchema(
           return ['checkbox', 'radio'].includes(data.type) && data.type;
         },
         triggerFields: ['type', 'valueList'],
-        componentProps(data) {
-          return {
-            mode: ['checkbox'].includes(data.type) ? 'multiple' : undefined,
-            class: 'w-full',
-            options: data.valueList,
-          };
-        },
+      },
+      componentProps(data) {
+        return {
+          mode: ['checkbox'].includes(data.type) ? 'multiple' : undefined,
+          class: 'w-full',
+          options: data.valueList,
+        };
       },
     },
     {
