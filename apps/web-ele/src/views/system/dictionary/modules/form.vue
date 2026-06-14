@@ -27,11 +27,11 @@ const [Form, formApi] = useVbenForm({
 
 const id = ref();
 const [Drawer, drawerApi] = useVbenDrawer({
+  class: 'w-[800px]',
   async onConfirm() {
     const { valid } = await formApi.validate();
     if (!valid) return;
-    const values =
-      await formApi.getValues<SystemDictionaryApi.SystemDictionary>();
+    const values = await formApi.getValues<SystemDictionaryApi.SystemDictionary>();
     if (values.type !== 'text' && Array.isArray(values.valueList)) {
       values.value = JSON.stringify(values.valueList);
     }
@@ -80,9 +80,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
 });
 
 const getDrawerTitle = computed(() => {
-  return formData.value?.id
-    ? $t('common.edit', '字典')
-    : $t('common.create', '字典');
+  return formData.value?.id ? $t('common.edit', '字典') : $t('common.create', '字典');
 });
 
 function valueModalSubmit(params: { label: string; value: string }[]) {
