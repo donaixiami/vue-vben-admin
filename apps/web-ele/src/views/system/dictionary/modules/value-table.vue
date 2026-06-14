@@ -1,7 +1,24 @@
 <script setup lang="ts">
 import { watch } from 'vue';
 
+import { useVbenVxeGrid } from '#/adapter/vxe-table';
+
+import { useColumns } from './value-table-data';
+
 const emits = defineEmits(['change']);
+
+const [Grid, gridApi] = useVbenVxeGrid({
+  gridOptions: {
+    columns: useColumns(),
+    rowConfig: {
+      keyField: 'id',
+      drag: true,
+    },
+    pagerConfig: {
+      enabled: false,
+    },
+  },
+});
 
 const model = defineModel();
 
@@ -27,6 +44,6 @@ const columns = [
 </script>
 <template>
   <div class="w-full">
-    <ATable :data-source="model || []" :columns="columns" size="small" />
+    <Grid />
   </div>
 </template>
