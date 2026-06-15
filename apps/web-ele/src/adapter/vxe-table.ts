@@ -64,11 +64,7 @@ setupVbenVxeTable({
     vxeUI.renderer.add('CellLink', {
       renderTableDefault(renderOpts) {
         const { props } = renderOpts;
-        return h(
-          ElButton,
-          { size: 'small', link: true },
-          { default: () => props?.text },
-        );
+        return h(ElButton, { size: 'small', link: true }, { default: () => props?.text });
       },
     });
 
@@ -150,18 +146,14 @@ setupVbenVxeTable({
             contentText: $t('common.edit'),
           },
         };
-        const operations: Array<Recordable<any>> = (
-          options || ['edit', 'delete']
-        )
+        const operations: Array<Recordable<any>> = (options || ['edit', 'delete'])
           .map((opt) => {
             if (isString(opt)) {
               return presets[opt]
                 ? { code: opt, ...defaultProps, ...presets[opt] }
                 : {
                     code: opt,
-                    contentText: $te(`common.${opt}`)
-                      ? $t(`common.${opt}`)
-                      : opt,
+                    contentText: $te(`common.${opt}`) ? $t(`common.${opt}`) : opt,
                     ...defaultProps,
                   };
             } else {
@@ -277,8 +269,6 @@ export type OnActionClickParams<T = Recordable<any>> = {
   code: string;
   row: T;
 };
-export type OnActionClickFn<T = Recordable<any>> = (
-  params: OnActionClickParams<T>,
-) => void;
+export type OnActionClickFn<T = Recordable<any>> = (params: OnActionClickParams<T>) => void;
 
 export type * from '@vben/plugins/vxe-table';

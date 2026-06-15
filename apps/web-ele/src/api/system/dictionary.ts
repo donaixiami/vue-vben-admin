@@ -13,7 +13,6 @@ export namespace SystemDictionaryApi {
     type: DictionaryType;
     value: null | string;
     valueList: [];
-    default_value: null | string;
     sort: number;
   }
 }
@@ -33,19 +32,16 @@ async function isMenuIdentifierExists(
  * 获取字典列表数据
  */
 async function getDictionaryList(params: Recordable<any>) {
-  return requestClient.get<Array<SystemDictionaryApi.SystemDictionary>>(
-    '/system/dictionary/list',
-    { params },
-  );
+  return requestClient.get<Array<SystemDictionaryApi.SystemDictionary>>('/system/dictionary/list', {
+    params,
+  });
 }
 
 /**
  * 创建字典
  * @param data 字典数据
  */
-async function createDictionary(
-  data: Omit<SystemDictionaryApi.SystemDictionary, 'id'>,
-) {
+async function createDictionary(data: Omit<SystemDictionaryApi.SystemDictionary, 'id'>) {
   return requestClient.post('/system/dictionary', data);
 }
 

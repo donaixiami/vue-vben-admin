@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import type { VxeGridProps } from '#/adapter/vxe-table';
 
+import { ref } from 'vue';
+
 import { Page } from '@vben/common-ui';
 
 import { Button, message } from 'ant-design-vue';
@@ -17,6 +19,8 @@ interface RowType {
   releaseDate: string;
 }
 
+const rowData = ref<RowType[]>([]);
+
 const gridOptions: VxeGridProps<RowType> = {
   columns: [
     { title: '序号', type: 'seq', width: 50 },
@@ -31,6 +35,7 @@ const gridOptions: VxeGridProps<RowType> = {
     { field: 'releaseDate', formatter: 'formatDateTime', title: 'Date' },
     { slots: { default: 'action' }, title: '操作' },
   ],
+  // 直接绑定响应式对象，不用 .value
   editConfig: {
     mode: 'row',
     trigger: 'click',
@@ -79,6 +84,7 @@ const cancelRowEvent = (_row: RowType) => {
 
 <template>
   <Page auto-content-height>
+    {{ rowData }}
     <Grid>
       <template #action="{ row }">
         <template v-if="hasEditStatus(row)">

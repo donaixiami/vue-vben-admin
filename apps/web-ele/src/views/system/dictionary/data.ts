@@ -1,7 +1,5 @@
 import type { Ref } from 'vue';
 
-import type { ExtendedModalApi } from '@vben/common-ui';
-
 import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { SystemDictionaryApi } from '#/api';
@@ -16,9 +14,6 @@ import ValueTable from './modules/value-table.vue';
 
 export function useFormSchema(
   formData: Ref<SystemDictionaryApi.SystemDictionary | undefined>,
-  options: {
-    modalApi: ExtendedModalApi;
-  },
 ): VbenFormSchema[] {
   return [
     {
@@ -44,40 +39,6 @@ export function useFormSchema(
       label: '字典名称',
       rules: 'required',
     },
-    {
-      component: 'Select',
-
-      fieldName: 'type',
-      label: '字典类型',
-      rules: 'required',
-      componentProps(data) {
-        return {
-          allowClear: true,
-          class: 'w-full',
-          options: [
-            { label: '文本', value: 'text' },
-            { label: '单选', value: 'radio' },
-            { label: '多选', value: 'checkbox' },
-          ],
-          onChange() {
-            data.default_value = undefined;
-          },
-        };
-      },
-    },
-
-    {
-      component: 'Input',
-      fieldName: 'value',
-      label: '内容',
-      rules: 'required',
-      dependencies: {
-        if(data) {
-          return ['text'].includes(data.type) && data.type;
-        },
-        triggerFields: ['type'],
-      },
-    },
 
     {
       formItemClass: 'items-start',
@@ -86,50 +47,8 @@ export function useFormSchema(
       rules: 'required',
       component: h(ValueTable),
       defaultValue: [],
-      dependencies: {
-        if(data) {
-          return !['text'].includes(data.type) && data.type;
-        },
-        triggerFields: ['type'],
-      },
-      componentProps(data) {
-        return {
-          onClick: () => {
-            options.modalApi.setData(data.valueList).open();
-          },
-        };
-      },
     },
-    {
-      component: 'Select',
-      fieldName: 'default_value_list',
-      label: '默认值',
 
-      dependencies: {
-        if(data) {
-          return ['checkbox', 'radio'].includes(data.type) && data.type;
-        },
-        triggerFields: ['type', 'valueList'],
-      },
-      componentProps(data) {
-        return {
-          mode: ['checkbox'].includes(data.type) ? 'multiple' : undefined,
-          class: 'w-full',
-          options: data.valueList,
-        };
-      },
-    },
-    {
-      component: 'Input',
-      fieldName: 'default_value',
-      label: '默认值',
-      dependencies: {
-        if(data) {
-          return ['text'].includes(data.type) && data.type;
-        },
-        triggerFields: ['type'],
-      },
-    },
     {
       component: 'InputNumber',
       fieldName: 'sort',
@@ -223,11 +142,6 @@ export function useColumns<T = SystemDictionaryApi.SystemDictionary>(
       title: '字典key',
       minWidth: 200,
     },
-    {
-      field: 'default_value',
-      title: '默认值',
-      minWidth: 200,
-    },
 
     {
       cellRender: {
@@ -257,6 +171,44 @@ export function useColumns<T = SystemDictionaryApi.SystemDictionary>(
       field: 'operation',
       fixed: 'right',
       title: $t('system.role.operation'),
+      width: 130,
+    },
+  ];
+}
+
+export function useValueTableColumns(): VxeTableGridOptions['columns'] {
+  return [
+    {
+      field: 'value',
+      title: '键',
+      editRender: {
+        name: 'input',
+        attrs: {
+          placeholder: '请输入键',
+          class: 'vxe-default-input w-full px-2',
+        },
+      },
+    },
+    {
+      field: 'label',
+      title: '值',
+      editRender: {
+        name: 'input',
+        attrs: {
+          class: 'vxe-default-input w-full px-2',
+          placeholder: '请输入键',
+        },
+      },
+    },
+    {
+      align: 'center',
+      cellRender: {
+        name: 'CellOperation',
+        options: ['delete'], // 🔥 只显示删除
+      },
+      field: 'operation',
+      fixed: 'right',
+      title: '操作',
       width: 130,
     },
   ];

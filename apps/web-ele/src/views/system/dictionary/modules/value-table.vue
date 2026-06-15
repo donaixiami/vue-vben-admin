@@ -1,15 +1,28 @@
 <script setup lang="ts">
-import { watch } from 'vue';
+import { Plus } from '@vben/icons';
+
+import { ElButton } from 'element-plus';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 
-import { useColumns } from './value-table-data';
+import { useValueTableColumns } from '../data';
 
-const emits = defineEmits(['change']);
+const model = defineModel<{ id: number; label: string; value: string }[]>({ default: [] });
 
-const [Grid, gridApi] = useVbenVxeGrid({
+const [Grid] = useVbenVxeGrid({
   gridOptions: {
-    columns: useColumns(),
+    editRules: {
+      label: [{ required: true, message: '必须填写' }],
+      value: [{ required: true, message: '必须填写' }],
+    },
+    keepSource: true,
+    columns: useValueTableColumns(),
+    // 全局编辑配置
+    editConfig: {
+      trigger: 'click',
+      mode: 'cell',
+      showStatus: true,
+    },
     rowConfig: {
       keyField: 'id',
       drag: true,
@@ -20,30 +33,27 @@ const [Grid, gridApi] = useVbenVxeGrid({
   },
 });
 
-const model = defineModel();
-
-watch(
-  () => model.value,
-  () => {
-    emits('change');
-  },
-);
-
-const columns = [
-  {
-    title: '键',
-    dataIndex: 'value',
-    key: 'value',
-  },
-  {
-    title: '值',
-    dataIndex: 'label',
-    key: 'label',
-  },
-];
+const addValue = () => {
+  model.value = [
+    ...model.value,
+    {
+      id: Date.now(),
+      label: '',
+      value: '',
+    },
+  ];
+};
 </script>
 <template>
   <div class="w-full">
-    <Grid />
+    {{ model }}
+    <Grid show-overflow :table-data="model">
+      <template #toolbar-tools>
+        <ElButton type="primary" @click="addValue">
+          <Plus class="size-5" />
+          添加键值
+        </ElButton>
+      </template>
+    </Grid>
   </div>
 </template>
