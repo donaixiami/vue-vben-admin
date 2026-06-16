@@ -27,7 +27,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
     const { valid } = await formApi.validate();
     if (!valid) return;
     const values = await formApi.getValues<SystemDictionaryApi.SystemDictionary>();
-    if (values.type !== 'text' && Array.isArray(values.valueList)) {
+    if (Array.isArray(values.valueList)) {
       values.value = JSON.stringify(values.valueList);
     }
 
