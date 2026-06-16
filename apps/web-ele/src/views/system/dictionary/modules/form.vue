@@ -4,6 +4,7 @@ import type { SystemDictionaryApi } from '#/api';
 import { computed, nextTick, ref } from 'vue';
 
 import { useVbenDrawer } from '@vben/common-ui';
+
 import { ElMessage } from 'element-plus';
 
 import { useVbenForm } from '#/adapter/form';
@@ -30,7 +31,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
     if (!valid) return;
 
     // 步骤2: 验证表格 - 通过 formApi.getFieldComponentRef 获取组件实例
-    const valueTableRef = formApi.getFieldComponentRef('valueList');
+    const valueTableRef = formApi.getFieldComponentRef('valueList') as any;
 
     if (valueTableRef?.validate) {
       const tableErrors = await valueTableRef.validate();
@@ -45,7 +46,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
     const values = await formApi.getValues<SystemDictionaryApi.SystemDictionary>();
     if (Array.isArray(values.valueList) && values.valueList.length > 0) {
       const hasEmptyValue = values.valueList.some(
-        (item) => !item.label?.trim() || !item.value?.trim()
+        (item) => !item.label?.trim() || !item.value?.trim(),
       );
       if (hasEmptyValue) {
         ElMessage.error('请完整填写所有键值对');
