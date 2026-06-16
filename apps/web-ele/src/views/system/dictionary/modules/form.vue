@@ -13,6 +13,18 @@ import { $t } from '#/locales';
 
 import { useFormSchema } from '../data';
 
+// 定义表格组件实例类型
+interface ValueTableInstance {
+  validate: () => Promise<any[] | undefined>;
+}
+
+// 定义字典值项类型
+interface DictionaryValueItem {
+  id: number;
+  label: string;
+  value: string;
+}
+
 const emits = defineEmits(['success']);
 
 const formData = ref<SystemDictionaryApi.SystemDictionary>();
@@ -31,7 +43,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
     if (!valid) return;
 
     // 步骤2: 验证表格 - 通过 formApi.getFieldComponentRef 获取组件实例
-    const valueTableRef = formApi.getFieldComponentRef('valueList') as any;
+    const valueTableRef = formApi.getFieldComponentRef<ValueTableInstance>('valueList');
 
     if (valueTableRef?.validate) {
       const tableErrors = await valueTableRef.validate();
@@ -44,8 +56,10 @@ const [Drawer, drawerApi] = useVbenDrawer({
 
     // 步骤3: 额外的数据完整性检查（备用验证）
     const values = await formApi.getValues<SystemDictionaryApi.SystemDictionary>();
-    if (Array.isArray(values.valueList) && values.valueList.length > 0) {
-      const hasEmptyValue = (values.valueList as any[]).some(
+    const valueList = values.valueList as DictionaryValueItem[] | undefined;
+
+    if (Array.isArray(valueList) && valueList.length > 0) {
+      const hasEmptyValue = valueList.some(
         (item) => !item.label?.trim() || !item.value?.trim(),
       );
       if (hasEmptyValue) {
@@ -54,8 +68,8 @@ const [Drawer, drawerApi] = useVbenDrawer({
       }
     }
 
-    if (Array.isArray(values.valueList)) {
-      values.value = JSON.stringify(values.valueList);
+    if (Array.isArray(valueList)) {
+      values.value = JSON.stringify(valueList);
     }
 
     drawerApi.lock();
