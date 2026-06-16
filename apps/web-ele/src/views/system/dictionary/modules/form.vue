@@ -45,7 +45,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
     // 步骤3: 额外的数据完整性检查（备用验证）
     const values = await formApi.getValues<SystemDictionaryApi.SystemDictionary>();
     if (Array.isArray(values.valueList) && values.valueList.length > 0) {
-      const hasEmptyValue = values.valueList.some(
+      const hasEmptyValue = (values.valueList as any[]).some(
         (item) => !item.label?.trim() || !item.value?.trim(),
       );
       if (hasEmptyValue) {

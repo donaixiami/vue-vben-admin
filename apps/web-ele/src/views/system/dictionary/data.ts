@@ -188,7 +188,6 @@ export function useValueTableColumns(): VxeTableGridOptions['columns'] {
           class: 'vxe-default-input w-full px-2',
         },
       },
-      editRules: [{ required: true, message: '请输入键' }],
     },
     {
       field: 'label',
@@ -200,7 +199,6 @@ export function useValueTableColumns(): VxeTableGridOptions['columns'] {
           placeholder: '请输入值',
         },
       },
-      editRules: [{ required: true, message: '请输入值' }],
     },
     {
       align: 'center',
