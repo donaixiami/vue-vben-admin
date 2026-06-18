@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { OnActionClickParams } from '#/adapter/vxe-table';
+
 import { Plus } from '@vben/icons';
 
 import { ElButton } from 'element-plus';
@@ -7,7 +9,9 @@ import { useVbenVxeGrid } from '#/adapter/vxe-table';
 
 import { useValueTableColumns } from '../data';
 
-const model = defineModel<{ id: number; label: string; value: string }[]>({ default: [] });
+const model = defineModel<{ id: number; label: string; value: string }[]>({
+  default: [],
+});
 
 const [Grid, gridApi] = useVbenVxeGrid({
   gridOptions: {
@@ -16,7 +20,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       value: [{ required: true, message: '必须填写' }],
     },
     keepSource: true,
-    columns: useValueTableColumns(),
+    columns: useValueTableColumns(onActionClick),
     // 全局编辑配置
     editConfig: {
       trigger: 'click',
@@ -39,7 +43,7 @@ defineExpose({
     // 先尝试 VxeTable 的 fullValidate(true) 强制验证所有行
     const errors = await gridApi.grid.fullValidate(true);
 
-    if (errors && errors.length > 0) {
+    if (errors && Array.isArray(errors) && errors.length > 0) {
       return errors;
     }
 
@@ -69,7 +73,19 @@ defineExpose({
     return manualErrors.length > 0 ? manualErrors : undefined;
   },
 });
-
+function onActionClick(
+  e: OnActionClickParams<{ id: number; label: string; value: string }>,
+) {
+  switch (e.code) {
+    case 'delete': {
+      onDelete(e.row);
+      break;
+    }
+  }
+}
+const onDelete = (row: { id: number }) => {
+  model.value = model.value.filter((item) => item.id !== row.id);
+};
 const addValue = () => {
   model.value = [
     ...model.value,

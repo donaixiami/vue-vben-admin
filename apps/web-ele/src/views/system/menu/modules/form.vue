@@ -17,7 +17,7 @@ import { breakpointsTailwind, useBreakpoints } from '@vueuse/core';
 import { useVbenForm, z } from '#/adapter/form';
 import {
   createMenu,
-  getMenuList,
+  getMenuTree,
   isMenuNameExists,
   isMenuPathExists,
   SystemMenuApi,
@@ -59,14 +59,17 @@ const schema: VbenFormSchema[] = [
           return !(await isMenuNameExists(value, formData.value?.id));
         },
         (value) => ({
-          message: $t('ui.formRules.alreadyExists', [$t('system.menu.menuName'), value]),
+          message: $t('ui.formRules.alreadyExists', [
+            $t('system.menu.menuName'),
+            value,
+          ]),
         }),
       ),
   },
   {
     component: 'ApiTreeSelect',
     componentProps: {
-      api: getMenuList,
+      api: getMenuTree,
       class: 'w-full',
       filterTreeNode(input: string, node: Recordable<any>) {
         if (!input || input.length === 0) {
@@ -87,15 +90,20 @@ const schema: VbenFormSchema[] = [
     },
     fieldName: 'pid',
     label: $t('system.menu.parent'),
+
     renderComponentContent() {
       return {
-        title({ label, meta }: { label: string; meta: Recordable<any> }) {
+        default({ data }: { data: Recordable<any> }) {
           const coms = [];
+          const label = data?.label ?? data?.meta?.title ?? '';
+
           if (!label) return '';
-          if (meta?.icon) {
-            coms.push(h(IconifyIcon, { class: 'size-4', icon: meta.icon }));
+          if (data?.meta?.icon) {
+            coms.push(
+              h(IconifyIcon, { class: 'size-4', icon: data.meta.icon }),
+            );
           }
-          coms.push(h('span', { class: '' }, $t(label || '')));
+          coms.push(h('span', {}, $t(label)));
           return h('div', { class: 'flex items-center gap-1' }, coms);
         },
       };
@@ -141,7 +149,10 @@ const schema: VbenFormSchema[] = [
           return !(await isMenuPathExists(value, formData.value?.id));
         },
         (value) => ({
-          message: $t('ui.formRules.alreadyExists', [$t('system.menu.path'), value]),
+          message: $t('ui.formRules.alreadyExists', [
+            $t('system.menu.path'),
+            value,
+          ]),
         }),
       ),
   },
@@ -455,7 +466,9 @@ const [Drawer, drawerApi] = useVbenDrawer({
       if (data) {
         formData.value = data;
         formApi.setValues(formData.value);
-        titleSuffix.value = formData.value.meta?.title ? $t(formData.value.meta.title) : '';
+        titleSuffix.value = formData.value.meta?.title
+          ? $t(formData.value.meta.title)
+          : '';
       } else {
         formApi.resetForm();
         titleSuffix.value = '';
@@ -468,7 +481,10 @@ async function onSubmit() {
   const { valid } = await formApi.validate();
   if (valid) {
     drawerApi.lock();
-    const data = await formApi.getValues<Omit<SystemMenuApi.SystemMenu, 'children' | 'id'>>();
+    const data =
+      await formApi.getValues<
+        Omit<SystemMenuApi.SystemMenu, 'children' | 'id'>
+      >();
     if (data.type === 'link') {
       data.meta = { ...data.meta, link: data.link_src };
     } else if (data.type === 'embedded') {
@@ -477,7 +493,9 @@ async function onSubmit() {
     delete data.link_src;
 
     try {
-      await (formData.value?.id ? updateMenu(formData.value.id, data) : createMenu(data));
+      await (formData.value?.id
+        ? updateMenu(formData.value.id, data)
+        : createMenu(data));
       emit('success');
       drawerApi.close();
     } finally {

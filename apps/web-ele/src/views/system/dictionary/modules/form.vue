@@ -43,7 +43,8 @@ const [Drawer, drawerApi] = useVbenDrawer({
     if (!valid) return;
 
     // 步骤2: 验证表格 - 通过 formApi.getFieldComponentRef 获取组件实例
-    const valueTableRef = formApi.getFieldComponentRef<ValueTableInstance>('valueList');
+    const valueTableRef =
+      formApi.getFieldComponentRef<ValueTableInstance>('valueList');
 
     if (valueTableRef?.validate) {
       const tableErrors = await valueTableRef.validate();
@@ -55,8 +56,9 @@ const [Drawer, drawerApi] = useVbenDrawer({
     }
 
     // 步骤3: 额外的数据完整性检查（备用验证）
-    const values = await formApi.getValues<SystemDictionaryApi.SystemDictionary>();
-    const valueList = values.valueList as DictionaryValueItem[] | undefined;
+    const values =
+      await formApi.getValues<SystemDictionaryApi.SystemDictionary>();
+    const valueList: DictionaryValueItem[] = values.valueList || [];
 
     if (Array.isArray(valueList) && valueList.length > 0) {
       const hasEmptyValue = valueList.some(
@@ -69,7 +71,12 @@ const [Drawer, drawerApi] = useVbenDrawer({
     }
 
     if (Array.isArray(valueList)) {
-      values.value = JSON.stringify(valueList);
+      values.value = JSON.stringify(
+        valueList?.map((item) => {
+          const { id: _id, ...rest } = item;
+          return { ...rest };
+        }),
+      );
     }
 
     drawerApi.lock();
@@ -93,7 +100,12 @@ const [Drawer, drawerApi] = useVbenDrawer({
       if (dataObject) {
         id.value = dataObject.id;
         if (dataObject.value) {
-          dataObject.valueList = JSON.parse(dataObject.value as string);
+          dataObject.valueList = JSON.parse(dataObject.value as string)?.map(
+            (item: DictionaryValueItem, index: number) => ({
+              ...item,
+              id: index + 1,
+            }),
+          );
         }
       } else {
         id.value = undefined;
@@ -108,7 +120,9 @@ const [Drawer, drawerApi] = useVbenDrawer({
 });
 
 const getDrawerTitle = computed(() => {
-  return formData.value?.id ? $t('common.edit', '字典') : $t('common.create', '字典');
+  return formData.value?.id
+    ? $t('common.edit', '字典')
+    : $t('common.create', '字典');
 });
 </script>
 <template>

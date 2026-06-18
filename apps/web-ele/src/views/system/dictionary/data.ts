@@ -29,7 +29,10 @@ export function useFormSchema(
             return !(await isMenuIdentifierExists(value, formData.value?.id));
           },
           (value) => ({
-            message: $t('ui.formRules.alreadyExists', [$t('system.menu.menuName'), value]),
+            message: $t('ui.formRules.alreadyExists', [
+              $t('system.menu.menuName'),
+              value,
+            ]),
           }),
         ),
     },
@@ -176,7 +179,9 @@ export function useColumns<T = SystemDictionaryApi.SystemDictionary>(
   ];
 }
 
-export function useValueTableColumns(): VxeTableGridOptions['columns'] {
+export function useValueTableColumns<
+  T = { id: number; label: string; value: string },
+>(onActionClick: OnActionClickFn<T>): VxeTableGridOptions['columns'] {
   return [
     {
       field: 'value',
@@ -203,6 +208,9 @@ export function useValueTableColumns(): VxeTableGridOptions['columns'] {
     {
       align: 'center',
       cellRender: {
+        attrs: {
+          onClick: onActionClick,
+        },
         name: 'CellOperation',
         options: ['delete'], // 🔥 只显示删除
       },
