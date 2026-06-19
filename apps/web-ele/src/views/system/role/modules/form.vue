@@ -111,7 +111,7 @@ function getNodeClass(node: Recordable<any>) {
         >
           <template #node="{ value }">
             <IconifyIcon v-if="value.meta.icon" :icon="value.meta.icon" />
-            {{ $t(value.meta.title) }}
+            {{ value.meta.title }}
           </template>
         </Tree>
       </template>

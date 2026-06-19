@@ -67,8 +67,8 @@ export function useColumns<T = SystemLoginLogApi.SystemLoginLog>(
       cellRender: {
         name: 'CellTag',
         options: [
-          { value: 1, label: '成功', color: 'success' },
-          { value: 0, label: '失败', color: 'error' },
+          { value: 1, label: '成功', type: 'success' },
+          { value: 0, label: '失败', type: 'error' },
         ],
       },
     },

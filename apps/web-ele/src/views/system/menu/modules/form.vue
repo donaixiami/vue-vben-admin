@@ -5,10 +5,9 @@ import type { Recordable } from '@vben/types';
 
 import type { VbenFormSchema } from '#/adapter/form';
 
-import { computed, h, ref } from 'vue';
+import { computed, ref } from 'vue';
 
 import { useVbenDrawer } from '@vben/common-ui';
-import { IconifyIcon } from '@vben/icons';
 import { $te } from '@vben/locales';
 import { getPopupContainer } from '@vben/utils';
 
@@ -33,6 +32,7 @@ const emit = defineEmits<{
 }>();
 const formData = ref<SystemMenuApi.SystemMenu>();
 const titleSuffix = ref<string>();
+
 const schema: VbenFormSchema[] = [
   {
     component: 'RadioGroup',
@@ -77,7 +77,7 @@ const schema: VbenFormSchema[] = [
         }
         const title: string = node.meta?.title ?? '';
         if (!title) return false;
-        return title.includes(input) || $t(title).includes(input);
+        return title.includes(input);
       },
       getPopupContainer,
       labelField: 'meta.title',
@@ -90,24 +90,6 @@ const schema: VbenFormSchema[] = [
     },
     fieldName: 'pid',
     label: $t('system.menu.parent'),
-
-    renderComponentContent() {
-      return {
-        default({ data }: { data: Recordable<any> }) {
-          const coms = [];
-          const label = data?.label ?? data?.meta?.title ?? '';
-
-          if (!label) return '';
-          if (data?.meta?.icon) {
-            coms.push(
-              h(IconifyIcon, { class: 'size-4', icon: data.meta.icon }),
-            );
-          }
-          coms.push(h('span', {}, $t(label)));
-          return h('div', { class: 'flex items-center gap-1' }, coms);
-        },
-      };
-    },
   },
   {
     component: 'Input',
@@ -213,12 +195,19 @@ const schema: VbenFormSchema[] = [
   {
     component: 'AutoComplete',
     componentProps: {
-      allowClear: true,
-      class: 'w-full',
-      filterOption(input: string, option: { value: string }) {
-        return option.value.toLowerCase().includes(input.toLowerCase());
+      clearable: true,
+      fetchSuggestions: (
+        queryString: string,
+        callback: (suggestions: Array<{ value: string }>) => void,
+      ) => {
+        const options = componentKeys.map((v) => ({ value: v }));
+        const results = queryString
+          ? options.filter((option) =>
+              option.value.toLowerCase().includes(queryString.toLowerCase()),
+            )
+          : options;
+        callback(results);
       },
-      options: componentKeys.map((v) => ({ value: v })),
     },
     dependencies: {
       rules: (values) => {
