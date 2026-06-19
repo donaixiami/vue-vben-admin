@@ -1,6 +1,8 @@
 # Project Context and Recovery Notes
 
-Last updated: 2026-06-19
+<!-- cspell:ignore depts -->
+
+Last updated: 2026-06-20
 
 This file is the handoff document for this working copy. Keep it current when changing project structure, runtime commands, API contracts, routing behavior, or any module-level convention that the next session would need to recover context quickly.
 
@@ -388,8 +390,8 @@ These were present before this document was written:
 - Backend `component` must match `views` path conventions. A bad component path silently becomes a 404 route after logging an error.
 - `VITE_GLOB_API_URL` as an absolute URL bypasses the local `/api` proxy.
 - Nitro mock blocks write methods under `/api/system/*`, so CRUD write failures in mock mode can be expected.
-- Some files show mojibake comments because of existing encoding issues. Prefer not to rewrite whole files just to fix comments unless the task is explicitly encoding cleanup.
-- The root README is still mostly upstream Vben documentation. Use this file for local working-copy context.
+- Some files show garbled comments because of existing encoding issues. Prefer not to rewrite whole files just to fix comments unless the task is explicitly encoding cleanup.
+- The root README has been rewritten for this working copy and now summarizes the `apps/web-ele` app, backend/API contract, route/menu behavior, modules, commands, and project conventions.
 - Avoid broad cleanup of deleted root-level temporary docs unless the user asks; their useful facts have been consolidated here.
 
 ## Resume Checklist
@@ -418,3 +420,7 @@ When starting a new session:
 - Restored dictionary deletion in the Element Plus app by replacing the AntD placeholder code with `deleteDictionary()`, loading/success messages, refresh on success, and dictionary-specific row/id typing.
 - Updated the `web-ele` notifications API contract from backend `dn_ht_node`: added management detail/publish/revoke endpoints and current-user inbox/unread/read/read-all/delete endpoints with typed request and response shapes.
 - Adapted the notifications form/list to the new API typing: form submit uses the create payload type, and list deletion now calls the management delete endpoint.
+
+### 2026-06-20
+
+- Rewrote the root `README.md` for this working copy instead of the upstream Vue Vben Admin template. The README now documents `apps/web-ele` as the primary app, the `dn_ht_node` backend relationship, local commands, API response contract, route/menu generation behavior, module coverage, and development conventions.

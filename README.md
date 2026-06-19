@@ -1,159 +1,188 @@
-<div align="center">
-  <a href="https://github.com/anncwb/vue-vben-admin">
-    <img alt="VbenAdmin Logo" width="215" src="https://unpkg.com/@vbenjs/static-source@0.1.7/source/logo-v1.webp">
-  </a>
-  <br>
-  <br>
+# Backend Management System Frontend
 
-[![license](https://img.shields.io/github/license/anncwb/vue-vben-admin.svg)](LICENSE)
+这是一个基于 Vue Vben Admin 5.7.0 二次开发的后台管理系统前端项目。当前仓库重点维护 `apps/web-ele` Element Plus 版本，用于对接本地后端项目 `dn_ht_node`。
 
-  <h1>Vue Vben Admin</h1>
-</div>
+## 项目定位
 
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=vbenjs_vue-vben-admin&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=vbenjs_vue-vben-admin) [![codeql](https://github.com/vbenjs/vue-vben-admin/actions/workflows/codeql.yml/badge.svg)](https://github.com/vbenjs/vue-vben-admin/actions/workflows/codeql.yml) [![build](https://github.com/vbenjs/vue-vben-admin/actions/workflows/build.yml/badge.svg)](https://github.com/vbenjs/vue-vben-admin/actions/workflows/build.yml) [![ci](https://github.com/vbenjs/vue-vben-admin/actions/workflows/ci.yml/badge.svg)](https://github.com/vbenjs/vue-vben-admin/actions/workflows/ci.yml) [![deploy](https://github.com/vbenjs/vue-vben-admin/actions/workflows/deploy.yml/badge.svg)](https://github.com/vbenjs/vue-vben-admin/actions/workflows/deploy.yml)
+- 主应用：`apps/web-ele`
+- UI 技术栈：Vue 3、Vite、TypeScript、Element Plus、Vben Common UI、Vxe Table
+- 权限模式：后端菜单驱动路由，前端根据 `/system/menu/all` 返回的菜单生成可访问页面
+- 后端项目：`D:\bangong\myProject\BackendManagementSystem\dn_ht_node`
+- 恢复上下文：见 `docs/PROJECT_CONTEXT.md`
 
-**English** | [中文](./README.zh-CN.md) | [日本語](./README.ja-JP.md)
+## 已接入模块
 
-## Introduction
+- 登录认证：登录、退出、刷新 token、用户信息、权限码
+- 系统用户：用户列表、创建、更新、状态切换、删除
+- 角色管理：角色列表、创建、更新、删除
+- 菜单管理：菜单树、菜单列表、名称/路径校验、创建、更新、删除
+- 部门管理：部门列表、创建、更新、删除
+- 字典管理：字典列表、标识校验、创建、更新、状态切换、删除
+- 分类类型：列表、树结构、创建、更新、删除
+- 消息通知：通知管理、发布、撤回、站内收件箱、未读数、已读处理
+- 文件管理：文件列表、详情、上传、OSS 上传、删除
+- 登录日志：列表、删除、清空
+- 文章管理：文章列表、详情、创建、更新、删除
 
-Vue Vben Admin is a free and open source middle and back-end template. Using the latest `vue3`, `vite`, `TypeScript` and other mainstream technology development, the out-of-the-box middle and back-end front-end solutions can also be used for learning reference.
+## 本地环境
 
-## Upgrade Notice
+推荐环境：
 
-This is the latest version, 5.0, and it is not compatible with previous versions. If you are starting a new project, it is recommended to use the latest version. If you wish to view the old version, please use the [v2 branch](https://github.com/vbenjs/vue-vben-admin/tree/v2).
+- Node.js：`^20.19.0 || ^22.18.0 || ^24.0.0`
+- pnpm：`>=10.0.0`，当前锁定 `pnpm@10.32.1`
 
-## Features
-
-- **Latest Technology Stack**: Developed with cutting-edge front-end technologies like Vue 3 and Vite
-- **TypeScript**: A language for application-scale JavaScript
-- **Themes**: Multiple theme colors available with customizable options
-- **Internationalization**: Comprehensive built-in internationalization support
-- **Permissions**: Built-in solution for dynamic route-based permission generation
-
-## Preview
-
-- [Vben Admin](https://vben.pro/) - Full version Chinese site
-
-Test Account: vben/123456
-
-<div align="center">
-  <img alt="VbenAdmin Logo" width="100%" src="https://anncwb.github.io/anncwb/images/preview1.png">
-  <img alt="VbenAdmin Logo" width="100%" src="https://anncwb.github.io/anncwb/images/preview2.png">
-  <img alt="VbenAdmin Logo" width="100%" src="https://anncwb.github.io/anncwb/images/preview3.png">
-</div>
-
-### Use Gitpod
-
-Open the project in Gitpod (free online dev environment for GitHub) and start coding immediately.
-
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/vbenjs/vue-vben-admin)
-
-## Documentation
-
-[Document](https://doc.vben.pro/)
-
-[Local project context and recovery notes](./docs/PROJECT_CONTEXT.md)
-
-## Install and Use
-
-1. Get the project code
+安装依赖：
 
 ```bash
-git clone https://github.com/vbenjs/vue-vben-admin.git
-```
-
-2. Install dependencies
-
-```bash
-cd vue-vben-admin
-npm i -g corepack
 pnpm install
 ```
 
-3. Run
+启动 Element Plus 应用：
 
 ```bash
+pnpm dev:ele
+```
+
+默认开发端口来自 `apps/web-ele/.env.development`：
+
+```text
+VITE_PORT=5777
+```
+
+访问地址通常为：
+
+```text
+http://localhost:5777
+```
+
+Windows PowerShell 如果阻止 `pnpm.ps1`，可使用：
+
+```powershell
+pnpm.cmd dev:ele
+```
+
+## 常用命令
+
+```bash
+# 启动当前主应用
+pnpm dev:ele
+
+# 启动全部 dev 应用
 pnpm dev
+
+# 类型检查当前主应用
+pnpm -F @vben/web-ele run typecheck
+
+# 构建当前主应用
+pnpm build:ele
+
+# 运行单元测试
+pnpm test:unit
 ```
 
-4. Build
+## 后端接口约定
 
-```bash
-pnpm build
+请求封装位于 `apps/web-ele/src/api/request.ts`，当前约定如下：
+
+- 成功码：`code === 0`
+- 数据字段：`data`
+- `requestClient` 返回业务 `data`
+- 分页返回：`{ items, total }`
+- 登录后请求头：`Authorization: Bearer <token>`
+- 语言请求头：`Accept-Language`
+
+后端统一响应结构：
+
+```ts
+{
+  code: number;
+  data: unknown;
+  error: unknown;
+  message: string;
+}
 ```
 
-## Change Log
+分页结构：
 
-[CHANGELOG](https://github.com/vbenjs/vue-vben-admin/releases)
+```ts
+{
+  items: unknown[];
+  total: number;
+}
+```
 
-## How to Contribute
+## 接口地址配置
 
-You are very welcome to join! [Raise an issue](https://github.com/anncwb/vue-vben-admin/issues/new/choose) or submit a Pull Request.
+接口地址通过 `apps/web-ele/.env.development` 和生产环境 env 文件配置。
 
-**Pull Request Process:**
+当前开发环境示例：
 
-1. Fork the code
-2. Create your branch: `git checkout -b feat/xxxx`
-3. Submit your changes: `git commit -am 'feat(function): add xxxxx'`
-4. Push your branch: `git push origin feat/xxxx`
-5. Submit `pull request`
+```text
+VITE_GLOB_API_URL=http://www.example.com:3000/api
+VITE_NITRO_MOCK=true
+```
 
-## Git Contribution Submission Specification
+注意：
 
-Reference [vue](https://github.com/vuejs/vue/blob/dev/.github/COMMIT_CONVENTION.md) specification ([Angular](https://github.com/conventional-changelog/conventional-changelog/tree/master/packages/conventional-changelog-angular))
+- 当 `VITE_GLOB_API_URL` 是绝对地址时，请求会直接访问该地址，不会走本地 `/api` 代理。
+- 如果要使用本地代理或 mock，请将 `VITE_GLOB_API_URL` 调整为 `/api`。
+- `apps/backend-mock` 的 Nitro mock 默认端口为 `5320`，并且会拦截部分 `/api/system/*` 写操作，所以 mock 更适合登录、菜单、只读联调。
 
-- `feat` Add new features
-- `fix` Fix the problem/BUG
-- `style` The code style is related and does not affect the running result
-- `perf` Optimization/performance improvement
-- `refactor` Refactor
-- `revert` Undo edit
-- `test` Test related
-- `docs` Documentation/notes
-- `chore` Dependency update/scaffolding configuration modification etc.
-- `ci` Continuous integration
-- `types` Type definition file changes
+## 路由和菜单
 
-## Browser Support
+当前 `apps/web-ele` 使用后端权限模式：
 
-The `Chrome 80+` browser is recommended for local development
+```ts
+accessMode: 'backend';
+```
 
-Support modern browsers, not IE
+这意味着：
 
-| [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/edge/edge_48x48.png" alt="Edge" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Edge | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/firefox/firefox_48x48.png" alt="Firefox" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Firefox | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/chrome/chrome_48x48.png" alt="Chrome" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Chrome | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/safari/safari_48x48.png" alt="Safari" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Safari |
-| :-: | :-: | :-: | :-: |
-| last 2 versions | last 2 versions | last 2 versions | last 2 versions |
+- 页面是否可见由后端菜单数据决定。
+- 只添加本地路由文件不会自动出现在菜单中。
+- 后端菜单的 `component` 必须能匹配 `apps/web-ele/src/views/**/*.vue`。
 
-## Maintainer
+例如：
 
-[@Vben](https://github.com/anncwb)
+```text
+后端 component: /system/menu/list
+前端文件: apps/web-ele/src/views/system/menu/list.vue
+```
 
-## Star History
+如果路径不匹配，路由会降级到 404，并在控制台输出类似 `route component is invalid` 的提示。
 
-[![Star History Chart](https://api.star-history.com/svg?repos=vbenjs/vue-vben-admin&type=Date)](https://star-history.com/#vbenjs/vue-vben-admin&Date)
+## 目录说明
 
-## Donate
+```text
+apps/web-ele                  当前主要维护的 Element Plus 前端应用
+apps/backend-mock             Vite 开发时可用的 Nitro mock 后端
+apps/web-antd                 Ant Design Vue 版本
+apps/web-naive                Naive UI 版本
+apps/web-tdesign              TDesign 版本
+docs/PROJECT_CONTEXT.md       项目恢复上下文和协作记忆
+packages/@core                Vben 核心 UI、布局、偏好设置等包
+packages/effects              access、request、plugins 等效果层包
+packages/stores               Pinia 状态包
+packages/utils                路由、菜单和通用工具
+internal/vite-config          Vite 共享配置
+scripts                       项目脚本和内部 CLI
+```
 
-If you think this project is helpful to you, you can help the author buy a cup of coffee to show your support!
+## 开发约定
 
-![donate](https://unpkg.com/@vbenjs/static-source@0.1.7/source/sponsor.png)
+- 业务接口优先放在 `apps/web-ele/src/api`。
+- 业务页面优先放在 `apps/web-ele/src/views`。
+- 常见 CRUD 页面使用 `data.ts`、`list.vue`、`modules/form.vue` 的结构。
+- 表格优先使用 `useVbenVxeGrid` 和全局 `CellOperation`。
+- 表单优先使用 Vben Form 适配层，Element Plus 组件需要先在 adapter 中注册。
+- 修改接口、路由、权限、模块约定或重要上下文时，同步更新 `docs/PROJECT_CONTEXT.md`。
 
-<a style="display: block;width: 100px;height: 50px;line-height: 50px; color: #fff;text-align: center; background: #408aee;border-radius: 4px;" href="https://www.paypal.com/paypalme/cvvben">Paypal Me</a>
+## 参考文档
 
-## Contributors
-
-<a href="https://openomy.app/github/vbenjs/vue-vben-admin" target="_blank" style="display: block; width: 100%;" align="center">
-  <img src="https://openomy.app/svg?repo=vbenjs/vue-vben-admin&chart=bubble&latestMonth=3" target="_blank" alt="Contribution Leaderboard" style="display: block; width: 100%;" />
- </a>
-
-<a href="https://github.com/vbenjs/vue-vben-admin/graphs/contributors">
-  <img alt="Contributors" src="https://contrib.rocks/image?repo=vbenjs/vue-vben-admin" />
-</a>
-
-## Discord
-
-- [Github Discussions](https://github.com/anncwb/vue-vben-admin/discussions)
+- 项目恢复上下文：`docs/PROJECT_CONTEXT.md`
+- Vben 官方文档：<https://doc.vben.pro/>
+- 上游仓库：<https://github.com/vbenjs/vue-vben-admin>
 
 ## License
 
-[MIT © Vben-2020](./LICENSE)
+本仓库继承上游 Vue Vben Admin 的 MIT License，详见 `LICENSE`。
