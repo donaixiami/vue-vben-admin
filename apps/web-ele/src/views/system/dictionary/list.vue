@@ -5,15 +5,15 @@ import type {
   OnActionClickParams,
   VxeTableGridOptions,
 } from '#/adapter/vxe-table';
-import type { SystemUserApi } from '#/api';
+import type { SystemDictionaryApi } from '#/api';
 
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { Plus } from '@vben/icons';
 
-import { ElButton } from 'element-plus';
+import { ElButton, ElMessage, ElMessageBox } from 'element-plus';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getDictionaryList, updateDictionary } from '#/api';
+import { deleteDictionary, getDictionaryList, updateDictionary } from '#/api';
 import { $t } from '#/locales';
 
 import { useColumns, useGridFormSchema } from './data';
@@ -68,10 +68,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
       search: true,
       zoom: true,
     },
-  } as VxeTableGridOptions<SystemUserApi.SystemUser>,
+  } as VxeTableGridOptions<SystemDictionaryApi.SystemDictionary>,
 });
 
-function onActionClick(e: OnActionClickParams<SystemUserApi.SystemUser>) {
+function onActionClick(
+  e: OnActionClickParams<SystemDictionaryApi.SystemDictionary>,
+) {
   switch (e.code) {
     case 'delete': {
       onDelete(e.row);
@@ -90,17 +92,10 @@ function onActionClick(e: OnActionClickParams<SystemUserApi.SystemUser>) {
  * @param title 提示标题
  */
 function confirm(content: string, title: string) {
-  return new Promise((reslove, reject) => {
-    // Modal.confirm({
-    //   content,
-    //   onCancel() {
-    //     reject(new Error('已取消'));
-    //   },
-    //   onOk() {
-    //     reslove(true);
-    //   },
-    //   title,
-    // });
+  return ElMessageBox.confirm(content, title, {
+    cancelButtonText: '取消',
+    confirmButtonText: '确定',
+    type: 'warning',
   });
 }
 
@@ -112,7 +107,7 @@ function confirm(content: string, title: string) {
  */
 async function onStatusChange(
   newStatus: number,
-  row: SystemUserApi.SystemUser,
+  row: SystemDictionaryApi.SystemDictionary,
 ) {
   const status: Recordable<string> = {
     0: '禁用',
@@ -130,27 +125,24 @@ async function onStatusChange(
   }
 }
 
-function onEdit(row: SystemUserApi.SystemUser) {
+function onEdit(row: SystemDictionaryApi.SystemDictionary) {
   formDrawerApi.setData(row).open();
 }
 
-function onDelete(row: SystemUserApi.SystemUser) {
-  // const hideLoading = message.loading({
-  //   content: $t('ui.actionMessage.deleting', [row.name]),
-  //   duration: 0,
-  //   key: 'action_process_msg',
-  // });
-  // deleteDictionary(row.id)
-  //   .then(() => {
-  //     message.success({
-  //       content: $t('ui.actionMessage.deleteSuccess', [row.name]),
-  //       key: 'action_process_msg',
-  //     });
-  //     onRefresh();
-  //   })
-  //   .catch(() => {
-  //     hideLoading();
-  //   });
+function onDelete(row: SystemDictionaryApi.SystemDictionary) {
+  const msg = ElMessage({
+    duration: 0,
+    message: $t('ui.actionMessage.deleting', [row.name]),
+  });
+
+  deleteDictionary(row.id)
+    .then(() => {
+      ElMessage.success($t('ui.actionMessage.deleteSuccess', [row.name]));
+      onRefresh();
+    })
+    .finally(() => {
+      msg.close();
+    });
 }
 
 function onRefresh() {

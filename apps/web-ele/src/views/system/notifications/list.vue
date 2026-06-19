@@ -11,7 +11,7 @@ import { Plus } from '@vben/icons';
 import { ElButton, ElMessage } from 'element-plus';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { getNotificationsList } from '#/api';
+import { deleteNotifications, getNotificationsList } from '#/api';
 import { $t } from '#/locales';
 
 import { useColumns, useGridFormSchema } from './data';
@@ -89,17 +89,20 @@ function onEdit(row: SystemNotificationsApi.SystemNotifications) {
 }
 
 function onDelete(row: SystemNotificationsApi.SystemNotifications) {
-  // const loadingMsg = $t('ui.actionMessage.deleting', [row.name]);
-  // const successMsg = $t('ui.actionMessage.deleteSuccess', [row.name]);
-  // ElMessage.info(loadingMsg);
-  // deleteRole(row.id)
-  //   .then(() => {
-  //     ElMessage.success(successMsg);
-  //     onRefresh();
-  //   })
-  //   .catch(() => {
-  //     ElMessage.error($t('ui.actionMessage.operationFailed', [row.name]));
-  //   });
+  const title = row.title || row.message;
+  const msg = ElMessage({
+    duration: 0,
+    message: $t('ui.actionMessage.deleting', [title]),
+  });
+
+  deleteNotifications(row.id)
+    .then(() => {
+      ElMessage.success($t('ui.actionMessage.deleteSuccess', [title]));
+      onRefresh();
+    })
+    .finally(() => {
+      msg.close();
+    });
 }
 
 function onRefresh() {

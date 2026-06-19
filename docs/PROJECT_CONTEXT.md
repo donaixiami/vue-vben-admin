@@ -291,7 +291,7 @@ System modules:
 - Department: list, create, update, delete.
 - Dictionary: list, identifier existence check, create, update, delete.
 - Category type: list/tree, create, update, delete.
-- Notifications: list, get/update/create/delete according to module API.
+- Notifications: management list/detail/create/update/delete plus publish/revoke, and current-user inbox list/unread-count/read/read-all/delete.
 - File: list/detail/upload/upload OSS/delete.
 - Login log: list, delete, clear through `/monitor/login-log/*`.
 
@@ -377,6 +377,9 @@ These were present before this document was written:
 - Menu form removed custom tree-select option rendering that double-translated menu titles.
 - Role permission tree node display now uses `value.meta.title` directly because `getMenuTree()` already translated titles.
 - Login log status tags use `type: 'success' | 'error'`, matching `ElTag`.
+- Dictionary list uses its own `SystemDictionaryApi.SystemDictionary` row type and Element Plus `ElMessage`/`ElMessageBox` for status confirmation and deletion. `updateDictionary()` accepts partial payloads for status-only updates, and dictionary delete ids use the dictionary entity id type.
+- Notifications API mirrors the `dn_ht_node` backend `src/modules/notifications` module: message body records use `system | message`, `low | medium | high`, `all | users | depts | roles`, and `draft | scheduled | sent | revoked`; inbox state is stored separately by receipt id.
+- Notifications list deletion calls `deleteNotifications(row.id)` and the drawer form reads values as `SystemNotificationsApi.CreateNotificationsParams` to match the backend create payload.
 - VS Code `jsonc` default formatter is locally changed to Prettier.
 
 ## Common Pitfalls
@@ -411,4 +414,7 @@ When starting a new session:
 
 - Created this recovery document after reading the monorepo structure, `web-ele` startup chain, env/Vite setup, request client, route guard, backend access generation, mock backend, API modules, adapter layers, and current local diff.
 - Added the explicit rule that future project modifications should update this document when they affect recovery context.
-- Fixed the local `AutoComplete` adapter registration so `vue-tsc` no longer reports the Element Plus autocomplete import error. The remaining `web-ele` type-check failures are in existing article, dictionary, category, and notifications files outside the menu/login-log changes.
+- Fixed the local `AutoComplete` adapter registration so `vue-tsc` no longer reports the Element Plus autocomplete import error. The remaining `web-ele` type-check failures are in existing article, category, and notifications files outside the menu/login-log changes.
+- Restored dictionary deletion in the Element Plus app by replacing the AntD placeholder code with `deleteDictionary()`, loading/success messages, refresh on success, and dictionary-specific row/id typing.
+- Updated the `web-ele` notifications API contract from backend `dn_ht_node`: added management detail/publish/revoke endpoints and current-user inbox/unread/read/read-all/delete endpoints with typed request and response shapes.
+- Adapted the notifications form/list to the new API typing: form submit uses the create payload type, and list deletion now calls the management delete endpoint.
