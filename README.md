@@ -52,6 +52,8 @@ Open the project in Gitpod (free online dev environment for GitHub) and start co
 
 [Document](https://doc.vben.pro/)
 
+[Local project context and recovery notes](./docs/PROJECT_CONTEXT.md)
+
 ## Install and Use
 
 1. Get the project code
