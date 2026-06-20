@@ -88,14 +88,21 @@ async function getDictionaryIdentifierExists(
   });
 }
 
-async function getDictionaryList(params: SystemDictionaryApi.QueryDictionaryParams) {
-  return requestClient.get<SystemDictionaryApi.DictionaryListResult>('/system/dictionary/list', {
-    params,
-  });
+async function getDictionaryList(
+  params: SystemDictionaryApi.QueryDictionaryParams,
+) {
+  return requestClient.get<SystemDictionaryApi.DictionaryListResult>(
+    '/system/dictionary/list',
+    {
+      params,
+    },
+  );
 }
 
 async function getDictionaryById(id: SystemDictionaryApi.DictionaryId) {
-  return requestClient.get<null | SystemDictionaryApi.SystemDictionary>(`/system/dictionary/${id}`);
+  return requestClient.get<null | SystemDictionaryApi.SystemDictionary>(
+    `/system/dictionary/${id}`,
+  );
 }
 
 async function getDictionaryByIdentifier(identifier: string) {
@@ -104,8 +111,13 @@ async function getDictionaryByIdentifier(identifier: string) {
   );
 }
 
-async function createDictionary(data: SystemDictionaryApi.CreateDictionaryParams) {
-  return requestClient.post<SystemDictionaryApi.SystemDictionary>('/system/dictionary', data);
+async function createDictionary(
+  data: SystemDictionaryApi.CreateDictionaryParams,
+) {
+  return requestClient.post<SystemDictionaryApi.SystemDictionary>(
+    '/system/dictionary',
+    data,
+  );
 }
 
 async function updateDictionary(

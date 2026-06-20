@@ -105,7 +105,9 @@ export function useFormSchema(): VbenFormSchema[] {
       label: '是否立即发送',
       dependencies: {
         trigger: async (values, actions) => {
-          const type = values.type as SystemNotificationsApi.NotificationType | undefined;
+          const type = values.type as
+            | SystemNotificationsApi.NotificationType
+            | undefined;
           if (!type || values.id) {
             return;
           }
