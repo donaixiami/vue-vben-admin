@@ -2,7 +2,14 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { SystemNotificationsApi } from '#/api';
 
+import { ref } from 'vue';
+
+import { upload_file } from '#/api/common/upload';
+import { getDictionaryByIdentifier } from '#/api/system/dictionary';
 import { $t } from '#/locales';
+
+const dialogImageUrl = ref('');
+const dialogVisible = ref(false);
 
 export function useFormSchema(): VbenFormSchema[] {
   return [
@@ -18,6 +25,126 @@ export function useFormSchema(): VbenFormSchema[] {
       label: '消息内容',
       rules: 'required',
     },
+    {
+      component: 'ApiSelect',
+      componentProps: {
+        api: async () => {
+          const dictionary = await getDictionaryByIdentifier('message_type');
+          return Array.isArray(dictionary?.value) ? dictionary.value : [];
+        },
+        afterFetch: (data: Array<{ label: string; value: string }>) => {
+          return data.map((item) => ({
+            label: item.label,
+            value: item.value,
+          }));
+        },
+        clearable: true,
+        placeholder: '请选择消息类型',
+      },
+      defaultValue: 'system',
+      fieldName: 'type',
+      label: '消息类型',
+      rules: 'required',
+    },
+    {
+      component: 'DatePicker',
+      componentProps: {
+        valueFormat: 'YYYY-MM-DD HH:mm:ss',
+        style: { width: '100%' },
+        type: 'datetime',
+        placeholder: '请选择定时发布时间',
+      },
+      fieldName: 'publish_at',
+      label: '定时发布时间',
+      rules: 'required',
+    },
+    {
+      component: 'Upload',
+      componentProps: {
+        accept: '.png,.jpg,.jpeg',
+        httpRequest: upload_file,
+        onSuccess: (response: any, uploadFile: any) => {
+          const url = response?.url ?? response?.file_url;
+          if (url) {
+            uploadFile.url = url;
+          }
+        },
+        disabled: false,
+        limit: 1,
+        listType: 'picture-card',
+        maxCount: 1,
+        multiple: false,
+        onPreview: (file: any) => {
+          dialogImageUrl.value = file?.url;
+          dialogVisible.value = true;
+        },
+        showUploadList: true,
+      },
+      fieldName: 'avatar',
+      label: '消息图标或头像',
+      renderComponentContent: () => {
+        return {
+          default: () => $t('examples.form.upload-image'),
+        };
+      },
+      rules: 'required',
+    },
+    {
+      component: 'RadioGroup',
+      componentProps: {
+        buttonStyle: 'solid',
+        isButton: true,
+        options: [
+          { label: '是', value: true },
+          { label: '否', value: false },
+        ],
+        optionType: 'button',
+      },
+      defaultValue: false,
+      fieldName: 'send_now',
+      label: '是否立即发送',
+      dependencies: {
+        trigger: async (values, actions) => {
+          const type = values.type as SystemNotificationsApi.NotificationType | undefined;
+          if (!type || values.id) {
+            return;
+          }
+          await actions.setFieldValue('send_now', type === 'message');
+        },
+        triggerFields: ['type'],
+      },
+    },
+    {
+      component: 'RadioGroup',
+      componentProps: {
+        buttonStyle: 'solid',
+        isButton: true,
+        options: [
+          { label: '高', value: 'high' },
+          { label: '中', value: 'medium' },
+          { label: '低', value: 'low' },
+        ],
+        optionType: 'button',
+      },
+      defaultValue: 'medium',
+      fieldName: 'priority',
+      label: '优先级',
+    },
+    {
+      component: 'RadioGroup',
+      componentProps: {
+        buttonStyle: 'solid',
+        isButton: true,
+        options: [
+          { label: $t('common.enabled'), value: 1 },
+          { label: $t('common.disabled'), value: 0 },
+        ],
+        optionType: 'button',
+      },
+      defaultValue: 1,
+      fieldName: 'status',
+      label: $t('system.role.status'),
+    },
   ];
 }
 
@@ -28,7 +155,11 @@ export function useGridFormSchema(): VbenFormSchema[] {
       fieldName: 'title',
       label: '标题',
     },
-    { component: 'Input', fieldName: 'id', label: '消息ID' },
+    {
+      component: 'Input',
+      fieldName: 'id',
+      label: '消息ID',
+    },
     {
       component: 'RangePicker',
       fieldName: 'created_at',
@@ -57,29 +188,23 @@ export function useColumns<T = SystemNotificationsApi.SystemNotifications>(
       title: '通知内容',
       minWidth: 160,
     },
-
     {
       cellRender: {
         name: 'CellTag',
         options: [
           { value: 'system', label: '系统通知', color: 'processing' },
-          { value: 'user', label: '用户消息', color: 'success' },
-          { value: 'alert', label: '警告通知', color: 'error' },
-          { value: 'event', label: '事件通知', color: 'warning' },
-          { value: 'announcement', label: '公告', color: 'processing' },
+          { value: 'message', label: '普通消息', color: 'success' },
         ],
       },
       field: 'type',
       title: '通知类型',
       width: 160,
     },
-
     {
       field: 'read_at',
       title: '阅读时间',
       width: 160,
     },
-
     {
       cellRender: {
         name: 'CellTag',
@@ -92,7 +217,6 @@ export function useColumns<T = SystemNotificationsApi.SystemNotifications>(
       title: $t('system.role.status'),
       width: 100,
     },
-
     {
       field: 'created_at',
       title: $t('system.role.createTime'),

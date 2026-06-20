@@ -19,6 +19,8 @@ When modifying this project, update this file in the same change if any of these
 
 Prefer appending a short entry under "Session Log" plus updating the relevant reference section. Do not leave important context only in chat history.
 
+Documentation placement rule: write project-specific documents under that project's root-level `docs` directory. For the primary Element Plus app, use `apps/web-ele/docs`. Use the repository root `docs` only for cross-project, workspace-level, or recovery-context documents such as this file.
+
 ## Current Snapshot
 
 - Repository: `https://github.com/donaixiami/vue-vben-admin.git`
@@ -99,6 +101,7 @@ The `web-ele` dev server uses `VITE_PORT=5777` in `apps/web-ele/.env.development
 ## Monorepo Map
 
 - `apps/web-ele`: primary Element Plus management app currently being customized.
+- `apps/web-ele/docs`: app-specific documentation for the Element Plus app. Put `web-ele` module/API/testing/troubleshooting docs here instead of scattering them at the repository root.
 - `apps/backend-mock`: Nitro mock backend used by Vite dev when enabled.
 - `apps/web-antd`, `apps/web-naive`, `apps/web-tdesign`, `apps/web-antdv-next`: other UI-framework variants.
 - `playground`: examples and e2e playground.
@@ -424,3 +427,6 @@ When starting a new session:
 ### 2026-06-20
 
 - Rewrote the root `README.md` for this working copy instead of the upstream Vue Vben Admin template. The README now documents `apps/web-ele` as the primary app, the `dn_ht_node` backend relationship, local commands, API response contract, route/menu generation behavior, module coverage, and development conventions.
+- Added `apps/web-ele/docs/README.md` as the dedicated documentation entry point for the Element Plus app and updated root docs to point future `web-ele` documentation there.
+- Recorded the documentation placement rule: project-specific documents belong in the relevant project root `docs` directory, while repository root `docs` is reserved for cross-project and recovery-context documentation.
+- Fixed the notifications form `ApiSelect` usage in `apps/web-ele/src/views/system/notifications/data.ts`: `ApiComponent` expects `componentProps.api` to be a function, not a Promise. For dictionary-backed selects, pass an async function that fetches the dictionary and returns the raw option list, then map it with `afterFetch`.

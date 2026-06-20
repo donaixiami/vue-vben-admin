@@ -6,10 +6,7 @@ import { computed, nextTick, ref } from 'vue';
 import { useVbenDrawer } from '@vben/common-ui';
 
 import { useVbenForm } from '#/adapter/form';
-import {
-  createNotifications,
-  updateNotifications,
-} from '#/api/system/notifications';
+import { createNotifications, updateNotifications } from '#/api/system/notifications';
 import { $t } from '#/locales';
 
 import { useFormSchema } from '../data';
@@ -22,7 +19,8 @@ const [Form, formApi] = useVbenForm({
   schema: useFormSchema(),
   showDefaultActions: false,
   commonConfig: {
-    labelClass: 'items-start leading-[32px]', // 所有 label 的基础样式
+    labelWidth: 130,
+    labelClass: 'items-start leading-[32px]',
     formItemClass: 'items-start',
   },
 });
@@ -32,13 +30,9 @@ const [Drawer, drawerApi] = useVbenDrawer({
   async onConfirm() {
     const { valid } = await formApi.validate();
     if (!valid) return;
-    const values =
-      await formApi.getValues<SystemNotificationsApi.CreateNotificationsParams>();
+    const values = await formApi.getValues<SystemNotificationsApi.CreateNotificationsParams>();
     drawerApi.lock();
-    (id.value
-      ? updateNotifications(id.value, values)
-      : createNotifications(values)
-    )
+    (id.value ? updateNotifications(id.value, values) : createNotifications(values))
       .then(() => {
         emits('success');
         drawerApi.close();
@@ -50,29 +44,32 @@ const [Drawer, drawerApi] = useVbenDrawer({
 
   async onOpenChange(isOpen) {
     if (isOpen) {
-      const data =
-        drawerApi.getData<SystemNotificationsApi.SystemNotifications>();
+      const data = drawerApi.getData<SystemNotificationsApi.SystemNotifications>();
       formApi.resetForm();
 
       if (data) {
         formData.value = data;
         id.value = data.id;
       } else {
+        formData.value = undefined;
         id.value = undefined;
       }
 
       await nextTick();
       if (data) {
         formApi.setValues(data);
+      } else {
+        await formApi.setValues({
+          send_now: false,
+          type: 'system',
+        });
       }
     }
   },
 });
 
 const getDrawerTitle = computed(() => {
-  return formData.value?.id
-    ? $t('common.edit', '消息')
-    : $t('common.create', '消息');
+  return formData.value?.id ? $t('common.edit', '娑堟伅') : $t('common.create', '娑堟伅');
 });
 </script>
 <template>

@@ -160,6 +160,7 @@ apps/web-antd                 Ant Design Vue 版本
 apps/web-naive                Naive UI 版本
 apps/web-tdesign              TDesign 版本
 docs/PROJECT_CONTEXT.md       项目恢复上下文和协作记忆
+apps/web-ele/docs             Element Plus 应用专属文档
 packages/@core                Vben 核心 UI、布局、偏好设置等包
 packages/effects              access、request、plugins 等效果层包
 packages/stores               Pinia 状态包
@@ -172,6 +173,7 @@ scripts                       项目脚本和内部 CLI
 
 - 业务接口优先放在 `apps/web-ele/src/api`。
 - 业务页面优先放在 `apps/web-ele/src/views`。
+- `apps/web-ele` 相关文档统一放在 `apps/web-ele/docs`。
 - 常见 CRUD 页面使用 `data.ts`、`list.vue`、`modules/form.vue` 的结构。
 - 表格优先使用 `useVbenVxeGrid` 和全局 `CellOperation`。
 - 表单优先使用 Vben Form 适配层，Element Plus 组件需要先在 adapter 中注册。
@@ -180,6 +182,7 @@ scripts                       项目脚本和内部 CLI
 ## 参考文档
 
 - 项目恢复上下文：`docs/PROJECT_CONTEXT.md`
+- Element Plus 应用文档：`apps/web-ele/docs/README.md`
 - Vben 官方文档：<https://doc.vben.pro/>
 - 上游仓库：<https://github.com/vbenjs/vue-vben-admin>
 

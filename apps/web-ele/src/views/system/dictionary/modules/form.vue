@@ -20,7 +20,7 @@ interface ValueTableInstance {
 
 // 定义字典值项类型
 interface DictionaryValueItem {
-  id: number;
+  id?: number;
   label: string;
   value: string;
 }

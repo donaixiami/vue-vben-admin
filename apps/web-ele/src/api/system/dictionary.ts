@@ -3,80 +3,137 @@ import type { Recordable } from '@vben/types';
 import { requestClient } from '#/api/request';
 
 export namespace SystemDictionaryApi {
-  export type DictionaryType = 'checkbox' | 'radio' | 'text' | undefined;
+  export type DictionaryId = number;
+  export type DictionaryStatus = 0 | 1;
+  export type DictionaryValue = DictionaryValueItem[] | null | string;
 
-  export interface SystemDictionary {
-    [key: string]: any;
-    id: number;
+  export interface DictionaryValueItem {
+    id?: number;
+    label: string;
+    value: string;
+  }
+
+  export interface DictionaryPayload extends Recordable<any> {
     identifier: string;
     name: string;
-    type: DictionaryType;
-    value: null | string;
-    valueList: [];
     sort: number;
+    status: DictionaryStatus;
+    value: DictionaryValue;
+    valueList?: DictionaryValueItem[];
+  }
+
+  export interface SystemDictionary extends DictionaryPayload {
+    [key: string]: any;
+    created_at?: null | string;
+    id: DictionaryId;
+    updated_at?: null | string;
+  }
+
+  export interface DictionaryDetail extends Omit<SystemDictionary, 'value'> {
+    value: DictionaryValue;
+  }
+
+  export interface DictionaryListResult {
+    items: SystemDictionary[];
+    total: number;
+  }
+
+  export interface QueryDictionaryParams extends Recordable<any> {
+    from_time?: string;
+    id?: DictionaryId | string;
+    identifier?: string;
+    name?: string;
+    page?: number;
+    pageSize?: number;
+    status?: DictionaryStatus | number;
+    to_time?: string;
+  }
+
+  export type CreateDictionaryParams = DictionaryPayload;
+
+  export interface UpdateDictionaryParams extends Partial<DictionaryPayload> {
+    id?: DictionaryId;
+  }
+
+  export interface DictionaryIdentifierExistsParams {
+    id?: DictionaryId | string;
+    identifier: string;
+  }
+
+  export interface DictionaryUpdateResult {
+    affected?: number;
+    raw?: unknown;
+  }
+
+  export interface DictionaryDeleteResult {
+    affected?: number;
+    raw?: unknown;
   }
 }
-/**
- * 查询字典唯一值是否重复
- */
-async function isMenuIdentifierExists(
+
+async function isDictionaryIdentifierExists(
   identifier: string,
-  id?: SystemDictionaryApi.SystemDictionary['id'],
+  id?: SystemDictionaryApi.DictionaryId,
 ) {
   return requestClient.get<boolean>('/system/dictionary/identifier-exists', {
     params: { id, identifier },
   });
 }
 
-/**
- * 获取字典列表数据
- */
-async function getDictionaryList(params: Recordable<any>) {
-  return requestClient.get<Array<SystemDictionaryApi.SystemDictionary>>(
-    '/system/dictionary/list',
-    {
-      params,
-    },
+async function getDictionaryIdentifierExists(
+  params: SystemDictionaryApi.DictionaryIdentifierExistsParams,
+) {
+  return requestClient.get<boolean>('/system/dictionary/identifier-exists', {
+    params,
+  });
+}
+
+async function getDictionaryList(params: SystemDictionaryApi.QueryDictionaryParams) {
+  return requestClient.get<SystemDictionaryApi.DictionaryListResult>('/system/dictionary/list', {
+    params,
+  });
+}
+
+async function getDictionaryById(id: SystemDictionaryApi.DictionaryId) {
+  return requestClient.get<null | SystemDictionaryApi.SystemDictionary>(`/system/dictionary/${id}`);
+}
+
+async function getDictionaryByIdentifier(identifier: string) {
+  return requestClient.get<null | SystemDictionaryApi.DictionaryDetail>(
+    `/system/dictionary/identifier/${identifier}`,
   );
 }
 
-/**
- * 创建字典
- * @param data 字典数据
- */
-async function createDictionary(
-  data: Omit<SystemDictionaryApi.SystemDictionary, 'id'>,
-) {
-  return requestClient.post('/system/dictionary', data);
+async function createDictionary(data: SystemDictionaryApi.CreateDictionaryParams) {
+  return requestClient.post<SystemDictionaryApi.SystemDictionary>('/system/dictionary', data);
 }
 
-/**
- * 更新字典
- *
- * @param id 字典 ID
- * @param data 字典数据
- */
 async function updateDictionary(
-  id: SystemDictionaryApi.SystemDictionary['id'],
-  data: Partial<Omit<SystemDictionaryApi.SystemDictionary, 'id'>>,
+  id: SystemDictionaryApi.DictionaryId,
+  data: SystemDictionaryApi.UpdateDictionaryParams,
 ) {
-  return requestClient.put(`/system/dictionary/${id}`, data);
+  return requestClient.put<SystemDictionaryApi.DictionaryUpdateResult>(
+    `/system/dictionary/${id}`,
+    data,
+  );
 }
 
-/**
- * 删除字典
- * @param id 字典 ID
- */
-async function deleteDictionary(
-  id: SystemDictionaryApi.SystemDictionary['id'],
-) {
-  return requestClient.delete(`/system/dictionary/${id}`);
+async function deleteDictionary(id: SystemDictionaryApi.DictionaryId) {
+  return requestClient.delete<SystemDictionaryApi.DictionaryDeleteResult>(
+    `/system/dictionary/${id}`,
+  );
 }
+
+const isMenuIdentifierExists = isDictionaryIdentifierExists;
 
 export {
   createDictionary,
   deleteDictionary,
+  getDictionaryById,
+  getDictionaryByIdentifier,
+  getDictionaryIdentifierExists,
   getDictionaryList,
+  isDictionaryIdentifierExists,
   isMenuIdentifierExists,
   updateDictionary,
 };

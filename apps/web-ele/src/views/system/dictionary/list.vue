@@ -106,7 +106,7 @@ function confirm(content: string, title: string) {
  * @returns 返回false则中止改变，返回其他值（undefined、true）则允许改变
  */
 async function onStatusChange(
-  newStatus: number,
+  newStatus: SystemDictionaryApi.DictionaryStatus,
   row: SystemDictionaryApi.SystemDictionary,
 ) {
   const status: Recordable<string> = {
