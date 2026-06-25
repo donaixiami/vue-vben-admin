@@ -430,3 +430,20 @@ When starting a new session:
 - Added `apps/web-ele/docs/README.md` as the dedicated documentation entry point for the Element Plus app and updated root docs to point future `web-ele` documentation there.
 - Recorded the documentation placement rule: project-specific documents belong in the relevant project root `docs` directory, while repository root `docs` is reserved for cross-project and recovery-context documentation.
 - Fixed the notifications form `ApiSelect` usage in `apps/web-ele/src/views/system/notifications/data.ts`: `ApiComponent` expects `componentProps.api` to be a function, not a Promise. For dictionary-backed selects, pass an async function that fetches the dictionary and returns the raw option list, then map it with `afterFetch`.
+
+### 2026-06-21
+
+- Fixed the Tiptap duplicate underline extension warning in `packages/effects/plugins/src/tiptap/extensions.ts`. Tiptap 3 `StarterKit` already registers `underline`, so the default extension list must not add `@tiptap/extension-underline` separately. Added a regression test that creates the default editor extensions and asserts `underline` is registered once.
+- Fixed the notifications drawer avatar upload value shape. `Upload` fields are bound through the Vben Form adapter as Element Plus `fileList` arrays, while the backend notification `avatar` field is a string URL. The drawer now converts backend strings to upload file lists on edit and resolves upload lists back to a string URL before create/update submit.
+
+### 2026-06-22
+
+- Updated the notifications drawer target table schema so `valueList` is hidden when `target_type` is `all`, visible for other broadcast ranges, and receives the current `target_type` as the `targetType` prop. The custom `TargetTable` component is wrapped with `markRaw()` in the form schema to avoid Vue making the component object reactive.
+
+### 2026-06-25
+
+- Moved notifications target list loading out of `target-drawer.vue` and into `target-table.vue`. The table now watches `targetType`, loads users/depts/roles plus the `broadcast_range` dictionary, and passes `targetList`, `broadcastRange`, and `targetType` into `TargetDrawer` through drawer data. `TargetDrawer` now only renders and selects the provided target rows.
+- Updated the notifications target table so changing `targetType` clears the selected `target_ids` model and drawer selection state after initial load. Initial form hydration is preserved so editing an existing notification does not wipe saved target ids.
+- Normalized notifications broadcast target submission to `target_ids: number[]`. `TargetTable` and `TargetDrawer` now keep selected target ids as numbers while still accepting numeric string ids from list APIs for display matching.
+- Refined notifications target clearing so `all -> users/depts/roles` does not clear selected ids. This preserves edit hydration when the form default starts at `all`; clearing only runs when switching away from an already selectable target type.
+- Added atomic-class selected-target chips in `target-table.vue`. Each selected notification target can be removed inline with an `X` icon button, which updates both the form `target_ids` model and the drawer selection state.

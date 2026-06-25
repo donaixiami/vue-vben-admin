@@ -4,6 +4,13 @@ import { z } from '#/adapter/form';
 import { getCategoryTypeList } from '#/api/system/category-type';
 import { $t } from '#/locales';
 
+function getPlainTextContent(value: string) {
+  return value
+    .replaceAll(/<[^>]*>/g, ' ')
+    .replaceAll(/\s+/g, ' ')
+    .trim();
+}
+
 export function useFormSchema(): VbenFormSchema[] {
   return [
     {
@@ -51,14 +58,18 @@ export function useFormSchema(): VbenFormSchema[] {
       help: '请输入图片URL地址',
     },
     {
-      component: 'Textarea',
+      component: 'Tiptap',
       componentProps: {
-        placeholder: '请输入文章内容',
-        rows: 12,
+        minHeight: 320,
       },
       fieldName: 'content',
       label: '文章内容',
-      rules: z.string().min(10, '文章内容至少10个字符'),
+      rules: z
+        .string()
+        .refine(
+          (value) => getPlainTextContent(value).length >= 10,
+          '文章内容至少10个字符',
+        ),
     },
     {
       component: 'RadioGroup',

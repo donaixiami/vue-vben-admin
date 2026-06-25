@@ -30,11 +30,22 @@ const [Form, formApi] = useVbenForm({
 
 const id = ref();
 const [Drawer, drawerApi] = useVbenDrawer({
+  class: 'w-[800px]',
   async onConfirm() {
     const { valid } = await formApi.validate();
     if (!valid) return;
     const values =
       await formApi.getValues<SystemNotificationsApi.CreateNotificationsParams>();
+    const response = values.avatars?.[0]?.response as {
+      id: string;
+      url: string;
+    };
+
+    delete values.avatars;
+    if (response && response.id) {
+      values.avatar_file_id = Number(response.id);
+    }
+
     drawerApi.lock();
     (id.value
       ? updateNotifications(id.value, values)
@@ -62,7 +73,18 @@ const [Drawer, drawerApi] = useVbenDrawer({
         formData.value = undefined;
         id.value = undefined;
       }
-
+      if (data && data?.avatar) {
+        formApi.setValues({
+          avatars: [
+            {
+              name: 'example.png',
+              status: 'done',
+              uid: '-1',
+              url: data?.avatar || '',
+            },
+          ],
+        });
+      }
       await nextTick();
       if (data) {
         formApi.setValues(data);

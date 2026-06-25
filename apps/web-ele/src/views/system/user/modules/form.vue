@@ -11,8 +11,7 @@ import { getPopupContainer } from '@vben/utils';
 
 import { ElDialog } from 'element-plus';
 
-import { z } from '#/adapter/form';
-import { useVbenForm } from '#/adapter/form';
+import { useVbenForm, z } from '#/adapter/form';
 import { upload_file } from '#/api/common/upload';
 import { getDeptList } from '#/api/system/dept';
 import { getRoleList } from '#/api/system/role';
@@ -207,7 +206,10 @@ function useFormSchema(): VbenFormSchema[] {
       label: '邮箱',
       rules: z
         .string()
-        .regex(/^[A-Za-z0-9\u4E00-\u9FA5]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+$/, '请输入正确的邮箱')
+        .regex(
+          /^[A-Za-z0-9\u4E00-\u9FA5]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+$/,
+          '请输入正确的邮箱',
+        )
         .optional(),
     },
     {
@@ -260,11 +262,13 @@ const [Drawer, drawerApi] = useVbenDrawer({
     const { valid } = await formApi.validate();
     if (!valid) return;
     const values = (await formApi.getValues()) as SystemUserApi.SystemUser;
-    const response = values.avatars[0].response as { id: string; url: string };
-
+    const response = values.avatars?.[0]?.response as {
+      id: string;
+      url: string;
+    };
     delete values.avatars;
     if (response && response.id) {
-      values.avatar_file_id = response.id;
+      values.avatar_file_id = Number(response.id);
     }
 
     drawerApi.lock();

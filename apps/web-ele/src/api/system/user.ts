@@ -39,6 +39,8 @@ export namespace SystemUserApi {
     createdAt: string;
     /** 更新时间 */
     updatedAt: string;
+    /** 头像 */
+    avatars?: (File & { response: { id: string; url: string } })[];
   }
 }
 
@@ -46,7 +48,10 @@ export namespace SystemUserApi {
  * 获取用户列表数据
  */
 async function getUserList(params: Recordable<any>) {
-  return requestClient.get<Array<SystemUserApi.SystemUser>>('/system/user/list', { params });
+  return requestClient.get<Array<SystemUserApi.SystemUser>>(
+    '/system/user/list',
+    { params },
+  );
 }
 
 /**
@@ -71,7 +76,10 @@ async function createUser(data: Omit<SystemUserApi.SystemUser, 'id'>) {
  * @param id 用户 ID
  * @param data 用户数据
  */
-async function updateUser(id: string, data: Omit<SystemUserApi.SystemUser, 'id'>) {
+async function updateUser(
+  id: string,
+  data: Omit<SystemUserApi.SystemUser, 'id'>,
+) {
   return requestClient.put(`/system/user/${id}`, data);
 }
 /**
@@ -80,7 +88,10 @@ async function updateUser(id: string, data: Omit<SystemUserApi.SystemUser, 'id'>
  * @param id 用户 ID
  * @param data 用户状态数据
  */
-async function updateUserStatus(id: string, data: SystemUserApi.UpdateUserStatusDto) {
+async function updateUserStatus(
+  id: string,
+  data: SystemUserApi.UpdateUserStatusDto,
+) {
   return requestClient.put(`/system/user/status/${id}`, data);
 }
 
@@ -92,4 +103,11 @@ async function deleteUser(id: string) {
   return requestClient.delete(`/system/user/${id}`);
 }
 
-export { createUser, deleteUser, getUserById, getUserList, updateUser, updateUserStatus };
+export {
+  createUser,
+  deleteUser,
+  getUserById,
+  getUserList,
+  updateUser,
+  updateUserStatus,
+};

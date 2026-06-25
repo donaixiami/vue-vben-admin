@@ -126,6 +126,10 @@ const ElUpload = defineAsyncComponent(() =>
   ]).then(([res]) => res.ElUpload),
 );
 
+const Tiptap = defineAsyncComponent(() =>
+  import('@vben/plugins/tiptap').then((res) => res.VbenTiptap),
+);
+
 const withDefaultPlaceholder = <T extends Component>(
   component: T,
   type: 'input' | 'select',
@@ -179,6 +183,7 @@ export type ComponentType =
   | 'Switch'
   | 'Textarea'
   | 'TimePicker'
+  | 'Tiptap'
   | 'TreeSelect'
   | 'Upload'
   | BaseFormComponentType;
@@ -280,6 +285,7 @@ async function initComponentAdapter() {
       type: 'textarea',
       autosize: { minRows: 3, maxRows: 6 },
     }),
+    Tiptap,
     RangePicker: (props, { attrs, slots }) => {
       // 添加默认样式宽度100%
       const { name, id } = props as Recordable<any>;

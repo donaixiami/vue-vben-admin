@@ -94,6 +94,7 @@ function onAppend(row: SystemCategoryTypeApi.SystemCategoryType) {
 }
 
 function onDelete(row: SystemCategoryTypeApi.SystemCategoryType) {
+  void row;
   // const hideLoading = message.loading({
   //   content: $t('ui.actionMessage.deleting', [row.name]),
   //   duration: 0,

@@ -2,11 +2,13 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { SystemNotificationsApi } from '#/api';
 
-import { ref } from 'vue';
+import { markRaw, ref } from 'vue';
 
 import { upload_file } from '#/api/common/upload';
 import { getDictionaryByIdentifier } from '#/api/system/dictionary';
 import { $t } from '#/locales';
+
+import TargetTable from './modules/target-table.vue';
 
 const dialogImageUrl = ref('');
 const dialogVisible = ref(false);
@@ -20,10 +22,13 @@ export function useFormSchema(): VbenFormSchema[] {
       rules: 'required',
     },
     {
-      component: 'Textarea',
+      component: 'Tiptap',
       fieldName: 'message',
       label: '消息内容',
       rules: 'required',
+      componentProps: {
+        imageResizable: true,
+      },
     },
     {
       component: 'ApiSelect',
@@ -45,6 +50,42 @@ export function useFormSchema(): VbenFormSchema[] {
       fieldName: 'type',
       label: '消息类型',
       rules: 'required',
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: {
+        api: async () => {
+          const dictionary = await getDictionaryByIdentifier('broadcast_range');
+          return Array.isArray(dictionary?.value) ? dictionary.value : [];
+        },
+        afterFetch: (data: Array<{ label: string; value: string }>) => {
+          return data.map((item) => ({
+            label: item.label,
+            value: item.value,
+          }));
+        },
+        clearable: true,
+        placeholder: '请选择广播范围',
+      },
+      defaultValue: 'all',
+      fieldName: 'target_type',
+      label: '广播范围',
+      rules: 'required',
+    },
+    {
+      formItemClass: 'items-start',
+      fieldName: 'target_ids',
+      label: '广播目标',
+      rules: 'required',
+      component: markRaw(TargetTable),
+      componentProps: (values) => ({
+        targetType: values.target_type,
+      }),
+      defaultValue: [],
+      dependencies: {
+        show: (values) => values.target_type !== 'all',
+        triggerFields: ['target_type'],
+      },
     },
     {
       component: 'DatePicker',
@@ -80,7 +121,7 @@ export function useFormSchema(): VbenFormSchema[] {
         },
         showUploadList: true,
       },
-      fieldName: 'avatar',
+      fieldName: 'avatars',
       label: '消息图标或头像',
       renderComponentContent: () => {
         return {
@@ -185,11 +226,11 @@ export function useColumns<T = SystemNotificationsApi.SystemNotifications>(
       title: '通知标题',
       minWidth: 160,
     },
-    {
-      field: 'message',
-      title: '通知内容',
-      minWidth: 160,
-    },
+    // {
+    //   field: 'message',
+    //   title: '通知内容',
+    //   minWidth: 160,
+    // },
     {
       cellRender: {
         name: 'CellTag',
@@ -237,6 +278,49 @@ export function useColumns<T = SystemNotificationsApi.SystemNotifications>(
       field: 'operation',
       fixed: 'right',
       title: $t('system.role.operation'),
+      width: 130,
+    },
+  ];
+}
+
+export function useValueTableColumns<
+  T = { id: number; label: string; value: string },
+>(onActionClick: OnActionClickFn<T>): VxeTableGridOptions['columns'] {
+  return [
+    {
+      field: 'value',
+      title: '键',
+      editRender: {
+        name: 'input',
+        attrs: {
+          placeholder: '请输入键',
+          class: 'vxe-default-input w-full px-2',
+        },
+      },
+    },
+    {
+      field: 'label',
+      title: '值',
+      editRender: {
+        name: 'input',
+        attrs: {
+          class: 'vxe-default-input w-full px-2',
+          placeholder: '请输入值',
+        },
+      },
+    },
+    {
+      align: 'center',
+      cellRender: {
+        attrs: {
+          onClick: onActionClick,
+        },
+        name: 'CellOperation',
+        options: ['delete'], // 🔥 只显示删除
+      },
+      field: 'operation',
+      fixed: 'right',
+      title: '操作',
       width: 130,
     },
   ];

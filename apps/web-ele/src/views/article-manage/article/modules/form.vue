@@ -24,7 +24,6 @@ const [Form, formApi] = useVbenForm({
 });
 
 const permissions = ref<any[]>([]);
-const loadingPermissions = ref(false);
 
 const id = ref();
 const [Drawer, drawerApi] = useVbenDrawer({

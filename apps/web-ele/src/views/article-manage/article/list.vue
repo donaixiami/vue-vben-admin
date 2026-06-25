@@ -90,17 +90,10 @@ function onActionClick(e: OnActionClickParams<SystemArticleApi.SystemArticle>) {
  * @param title 提示标题
  */
 function confirm(content: string, title: string) {
-  return new Promise((reslove, reject) => {
-    // Modal.confirm({
-    //   content,
-    //   onCancel() {
-    //     reject(new Error('已取消'));
-    //   },
-    //   onOk() {
-    //     reslove(true);
-    //   },
-    //   title,
-    // });
+  return ElMessageBox.confirm(content, title, {
+    cancelButtonText: '取消',
+    confirmButtonText: '确定',
+    type: 'warning',
   });
 }
 
@@ -157,7 +150,9 @@ function onDelete(row: SystemArticleApi.SystemArticle) {
       } catch (error: any) {
         loading.close();
         ElMessage.error(
-          error?.response?.data?.message || error?.message || '删除失败，请重试',
+          error?.response?.data?.message ||
+            error?.message ||
+            '删除失败，请重试',
         );
       }
     })
