@@ -13,6 +13,7 @@ import {
 import { $t } from '#/locales';
 
 import { useFormSchema } from '../data';
+import { normalizePublishAtForSubmit } from './publish-at';
 
 const emits = defineEmits(['success']);
 
@@ -34,8 +35,9 @@ const [Drawer, drawerApi] = useVbenDrawer({
   async onConfirm() {
     const { valid } = await formApi.validate();
     if (!valid) return;
-    const values =
-      await formApi.getValues<SystemNotificationsApi.CreateNotificationsParams>();
+    const values = normalizePublishAtForSubmit(
+      await formApi.getValues<SystemNotificationsApi.CreateNotificationsParams>(),
+    );
     const response = values.avatars?.[0]?.response as {
       id: string;
       url: string;

@@ -447,3 +447,4 @@ When starting a new session:
 - Normalized notifications broadcast target submission to `target_ids: number[]`. `TargetTable` and `TargetDrawer` now keep selected target ids as numbers while still accepting numeric string ids from list APIs for display matching.
 - Refined notifications target clearing so `all -> users/depts/roles` does not clear selected ids. This preserves edit hydration when the form default starts at `all`; clearing only runs when switching away from an already selectable target type.
 - Added atomic-class selected-target chips in `target-table.vue`. Each selected notification target can be removed inline with an `X` icon button, which updates both the form `target_ids` model and the drawer selection state.
+- Updated the notifications form publish timing behavior: when `send_now` is `true`, `publish_at` is hidden, cleared in the form model, and normalized to `null` before create/update submission.

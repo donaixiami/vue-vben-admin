@@ -8,6 +8,11 @@ import { upload_file } from '#/api/common/upload';
 import { getDictionaryByIdentifier } from '#/api/system/dictionary';
 import { $t } from '#/locales';
 
+import {
+  clearPublishAtWhenSendNow,
+  getPublishAtRules,
+  shouldShowPublishAt,
+} from './modules/publish-at';
 import TargetTable from './modules/target-table.vue';
 
 const dialogImageUrl = ref('');
@@ -97,7 +102,12 @@ export function useFormSchema(): VbenFormSchema[] {
       },
       fieldName: 'publish_at',
       label: '定时发布时间',
-      rules: 'required',
+      dependencies: {
+        rules: getPublishAtRules,
+        show: shouldShowPublishAt,
+        trigger: clearPublishAtWhenSendNow,
+        triggerFields: ['send_now'],
+      },
     },
     {
       component: 'Upload',
@@ -247,6 +257,18 @@ export function useColumns<T = SystemNotificationsApi.SystemNotifications>(
       field: 'read_at',
       title: '阅读时间',
       width: 160,
+    },
+    {
+      cellRender: {
+        name: 'CellTag',
+        options: [
+          { value: 1, label: '启用' },
+          { value: 0, label: '停用' },
+        ],
+      },
+      field: 'send_state',
+      title: '发送状态',
+      width: 100,
     },
     {
       cellRender: {
