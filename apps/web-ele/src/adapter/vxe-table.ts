@@ -64,7 +64,11 @@ setupVbenVxeTable({
     vxeUI.renderer.add('CellLink', {
       renderTableDefault(renderOpts) {
         const { props } = renderOpts;
-        return h(ElButton, { size: 'small', link: true }, { default: () => props?.text });
+        return h(
+          ElButton,
+          { size: 'small', link: true },
+          { default: () => props?.text },
+        );
       },
     });
 
@@ -100,7 +104,9 @@ setupVbenVxeTable({
           ...props,
           modelValue: row[column.field],
           loading: row[loadingKey] ?? false,
-          disabled: isFunction(attrs?.disabled) ? attrs.disabled(row) : attrs?.disabled,
+          disabled: isFunction(attrs?.disabled)
+            ? attrs.disabled(row)
+            : attrs?.disabled,
           'onUpdate:modelValue': onChange,
         };
         async function onChange(newVal: any) {
@@ -142,18 +148,23 @@ setupVbenVxeTable({
             contentText: $t('common.delete'),
           },
           edit: {
+            type: 'warning',
             link: true,
             contentText: $t('common.edit'),
           },
         };
-        const operations: Array<Recordable<any>> = (options || ['edit', 'delete'])
+        const operations: Array<Recordable<any>> = (
+          options || ['edit', 'delete']
+        )
           .map((opt) => {
             if (isString(opt)) {
               return presets[opt]
                 ? { code: opt, ...defaultProps, ...presets[opt] }
                 : {
                     code: opt,
-                    contentText: $te(`common.${opt}`) ? $t(`common.${opt}`) : opt,
+                    contentText: $te(`common.${opt}`)
+                      ? $t(`common.${opt}`)
+                      : opt,
                     ...defaultProps,
                   };
             } else {
@@ -269,6 +280,8 @@ export type OnActionClickParams<T = Recordable<any>> = {
   code: string;
   row: T;
 };
-export type OnActionClickFn<T = Recordable<any>> = (params: OnActionClickParams<T>) => void;
+export type OnActionClickFn<T = Recordable<any>> = (
+  params: OnActionClickParams<T>,
+) => void;
 
 export type * from '@vben/plugins/vxe-table';

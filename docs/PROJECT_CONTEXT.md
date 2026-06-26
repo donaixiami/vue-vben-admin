@@ -448,3 +448,9 @@ When starting a new session:
 - Refined notifications target clearing so `all -> users/depts/roles` does not clear selected ids. This preserves edit hydration when the form default starts at `all`; clearing only runs when switching away from an already selectable target type.
 - Added atomic-class selected-target chips in `target-table.vue`. Each selected notification target can be removed inline with an `X` icon button, which updates both the form `target_ids` model and the drawer selection state.
 - Updated the notifications form publish timing behavior: when `send_now` is `true`, `publish_at` is hidden, cleared in the form model, and normalized to `null` before create/update submission.
+
+### 2026-06-26
+
+- Switched the notifications list `send_state` column to dictionary-driven `CellTag` options. `useColumns` now accepts a `sendStateOptions` parameter, and the list page loads `send_state` plus `send_state_color` dictionaries, merges them by shared `value`, and maps the color dictionary label to the Element Plus tag `type`.
+- Updated the notifications `publish_at` picker to prevent past publish times and to pass a current `defaultTime`, so selecting a date keeps the current hour/minute/second instead of resetting to `00:00:00`.
+- Replaced the Element Plus layout notification mock list with `getNotificationsInbox({ page: 1, pageSize: 10 })`. Inbox API rows are mapped through `layouts/modules/notification-inbox.ts` so layout `NotificationItem` field changes stay isolated.

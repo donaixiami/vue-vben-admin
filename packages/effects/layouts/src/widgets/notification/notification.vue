@@ -24,6 +24,7 @@ interface Props {
    * 消息列表
    */
   notifications?: NotificationItem[];
+  showRemove?: boolean;
 }
 
 defineOptions({ name: 'NotificationPopup' });
@@ -31,6 +32,7 @@ defineOptions({ name: 'NotificationPopup' });
 withDefaults(defineProps<Props>(), {
   dot: false,
   notifications: () => [],
+  showRemove: true,
 });
 
 const emit = defineEmits<{
@@ -154,7 +156,7 @@ function navigateTo(
                   <CircleCheckBig class="size-4" />
                 </VbenIconButton>
                 <VbenIconButton
-                  v-if="item.isRead"
+                  v-if="showRemove && item.isRead"
                   size="xs"
                   variant="ghost"
                   class="h-6 px-2 text-destructive"

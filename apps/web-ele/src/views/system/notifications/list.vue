@@ -5,17 +5,25 @@ import type {
 } from '#/adapter/vxe-table';
 import type { SystemNotificationsApi } from '#/api';
 
+import { onMounted } from 'vue';
+
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { Plus } from '@vben/icons';
 
-import { ElButton, ElMessage } from 'element-plus';
+import { ElButton, ElMessage, ElMessageBox } from 'element-plus';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { deleteNotifications, getNotificationsList } from '#/api';
+import {
+  deleteNotifications,
+  getNotificationsList,
+  publishNotifications,
+  revokeNotifications,
+} from '#/api';
 import { $t } from '#/locales';
 
 import { useColumns, useGridFormSchema } from './data';
 import Form from './modules/form.vue';
+import { loadSendStateTagOptions } from './modules/send-state';
 
 const [FormDrawer, formDrawerApi] = useVbenDrawer({
   connectedComponent: Form,
@@ -69,6 +77,13 @@ const [Grid, gridApi] = useVbenVxeGrid({
   } as VxeTableGridOptions<SystemNotificationsApi.SystemNotifications>,
 });
 
+onMounted(async () => {
+  const sendStateOptions = await loadSendStateTagOptions();
+  gridApi.setGridOptions({
+    columns: useColumns(onActionClick, sendStateOptions),
+  });
+});
+
 function onActionClick(
   e: OnActionClickParams<SystemNotificationsApi.SystemNotifications>,
 ) {
@@ -81,7 +96,69 @@ function onActionClick(
       onEdit(e.row);
       break;
     }
+    case 'send': {
+      onSend(e.row);
+      break;
+    }
+    case 'withdraw': {
+      onWithdraw(e.row);
+      break;
+    }
   }
+}
+
+function confirm(content: string, title: string) {
+  return ElMessageBox.confirm(content, title, {
+    cancelButtonText: '取消',
+    confirmButtonText: '确定',
+    type: 'warning',
+  });
+}
+
+async function onWithdraw(row: SystemNotificationsApi.SystemNotifications) {
+  const title = row.title || row.message;
+  try {
+    await confirm(`确定撤回 ${title} 吗？`, '撤回确认');
+  } catch {
+    return;
+  }
+
+  const msg = ElMessage({
+    duration: 0,
+    message: `正在撤回 ${title} ...`,
+  });
+
+  revokeNotifications(row.id)
+    .then(() => {
+      ElMessage.success(`${title} 撤回成功`);
+      onRefresh();
+    })
+    .finally(() => {
+      msg.close();
+    });
+}
+
+async function onSend(row: SystemNotificationsApi.SystemNotifications) {
+  const title = row.title || row.message;
+  try {
+    await confirm(`确定发送 ${title} 吗？`, '发送确认');
+  } catch {
+    return;
+  }
+
+  const msg = ElMessage({
+    duration: 0,
+    message: `正在发送 ${title} ...`,
+  });
+
+  publishNotifications(row.id)
+    .then(() => {
+      ElMessage.success(`${title} 发送成功`);
+      onRefresh();
+    })
+    .finally(() => {
+      msg.close();
+    });
 }
 
 function onEdit(row: SystemNotificationsApi.SystemNotifications) {

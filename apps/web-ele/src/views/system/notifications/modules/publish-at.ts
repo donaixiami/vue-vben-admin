@@ -1,3 +1,5 @@
+import { z } from '#/adapter/form';
+
 type PublishAtValues = {
   publish_at?: null | string;
   send_now?: boolean;
@@ -15,7 +17,35 @@ function shouldShowPublishAt(values: PublishAtValues) {
 }
 
 function getPublishAtRules(values: PublishAtValues) {
-  return shouldShowPublishAt(values) ? 'required' : null;
+  return shouldShowPublishAt(values)
+    ? z
+        .string()
+        .nullish()
+        .refine(
+          (value) => !value || isFuturePublishAt(value),
+          '定时发布时间不能早于当前时间',
+        )
+    : null;
+}
+
+function disablePastPublishDate(date: Date, now = new Date()) {
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+
+  return date.getTime() < today.getTime();
+}
+
+function getDefaultPublishTime(now = new Date()) {
+  return new Date(now);
+}
+
+function isFuturePublishAt(value: null | string | undefined, now = new Date()) {
+  if (!value) {
+    return false;
+  }
+
+  const publishAt = new Date(value.replace(' ', 'T')).getTime();
+  return Number.isFinite(publishAt) && publishAt >= now.getTime();
 }
 
 async function clearPublishAtWhenSendNow(
@@ -40,7 +70,10 @@ function normalizePublishAtForSubmit<T extends PublishAtValues>(values: T): T {
 
 export {
   clearPublishAtWhenSendNow,
+  disablePastPublishDate,
+  getDefaultPublishTime,
   getPublishAtRules,
+  isFuturePublishAt,
   normalizePublishAtForSubmit,
   shouldShowPublishAt,
 };

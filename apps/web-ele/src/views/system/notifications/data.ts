@@ -1,3 +1,5 @@
+import type { SendStateCellTagOption } from './modules/send-state';
+
 import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { SystemNotificationsApi } from '#/api';
@@ -10,6 +12,8 @@ import { $t } from '#/locales';
 
 import {
   clearPublishAtWhenSendNow,
+  disablePastPublishDate,
+  getDefaultPublishTime,
   getPublishAtRules,
   shouldShowPublishAt,
 } from './modules/publish-at';
@@ -94,12 +98,15 @@ export function useFormSchema(): VbenFormSchema[] {
     },
     {
       component: 'DatePicker',
-      componentProps: {
+      componentProps: () => ({
         valueFormat: 'YYYY-MM-DD HH:mm:ss',
         style: { width: '100%' },
         type: 'datetime',
         placeholder: '请选择定时发布时间',
-      },
+        disabledDate: disablePastPublishDate,
+        arrowControl: true,
+        defaultTime: getDefaultPublishTime(),
+      }),
       fieldName: 'publish_at',
       label: '定时发布时间',
       dependencies: {
@@ -224,6 +231,7 @@ export function useGridFormSchema(): VbenFormSchema[] {
 
 export function useColumns<T = SystemNotificationsApi.SystemNotifications>(
   onActionClick: OnActionClickFn<T>,
+  sendStateOptions: SendStateCellTagOption[] = [],
 ): VxeTableGridOptions['columns'] {
   return [
     {
@@ -236,56 +244,54 @@ export function useColumns<T = SystemNotificationsApi.SystemNotifications>(
       title: '通知标题',
       minWidth: 160,
     },
-    // {
-    //   field: 'message',
-    //   title: '通知内容',
-    //   minWidth: 160,
-    // },
+
     {
       cellRender: {
         name: 'CellTag',
         options: [
-          { value: 'system', label: '系统通知', color: 'processing' },
-          { value: 'message', label: '普通消息', color: 'success' },
+          { value: 'system', label: '系统通知', type: 'primary' },
+          { value: 'message', label: '普通消息', type: 'success' },
         ],
       },
       field: 'type',
       title: '通知类型',
-      width: 160,
+      minWidth: 160,
     },
     {
       field: 'read_at',
       title: '阅读时间',
-      width: 160,
+      minWidth: 160,
     },
     {
       cellRender: {
         name: 'CellTag',
-        options: [
-          { value: 1, label: '启用' },
-          { value: 0, label: '停用' },
-        ],
+        options: sendStateOptions,
       },
-      field: 'send_state',
+      field: 'send_status',
       title: '发送状态',
-      width: 100,
+      minWidth: 100,
     },
     {
       cellRender: {
         name: 'CellTag',
         options: [
-          { value: 1, label: '启用', color: 'success' },
-          { value: 0, label: '停用', color: 'error' },
+          { value: 1, label: '启用', type: 'success' },
+          { value: 0, label: '停用', type: 'error' },
         ],
       },
       field: 'status',
       title: $t('system.role.status'),
-      width: 100,
+      minWidth: 100,
     },
     {
       field: 'created_at',
       title: $t('system.role.createTime'),
-      width: 200,
+      minWidth: 200,
+    },
+    {
+      field: 'sent_at',
+      title: '发送时间',
+      minWidth: 200,
     },
     {
       align: 'center',
@@ -296,11 +302,36 @@ export function useColumns<T = SystemNotificationsApi.SystemNotifications>(
           onClick: onActionClick,
         },
         name: 'CellOperation',
+        options: [
+          {
+            type: 'primary',
+            link: true,
+            contentText: '发送',
+            code: 'send',
+            show: (row: SystemNotificationsApi.SystemNotifications) =>
+              !['revoked', 'sent'].includes(row.send_status),
+          },
+          {
+            code: 'edit',
+            show: (row: SystemNotificationsApi.SystemNotifications) =>
+              !['revoked', 'sent'].includes(row.send_status),
+          },
+          {
+            type: 'danger',
+            link: true,
+            contentText: '撤回',
+            code: 'withdraw',
+            show: (row: SystemNotificationsApi.SystemNotifications) =>
+              row.send_status === 'sent',
+          },
+          'delete',
+        ],
       },
+
       field: 'operation',
       fixed: 'right',
       title: $t('system.role.operation'),
-      width: 130,
+      minWidth: 130,
     },
   ];
 }
