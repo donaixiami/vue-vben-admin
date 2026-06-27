@@ -16,7 +16,7 @@ import { breakpointsTailwind, useBreakpoints } from '@vueuse/core';
 import { useVbenForm, z } from '#/adapter/form';
 import {
   createMenu,
-  getMenuTree,
+  getMenuList,
   isMenuNameExists,
   isMenuPathExists,
   SystemMenuApi,
@@ -32,6 +32,29 @@ const emit = defineEmits<{
 }>();
 const formData = ref<SystemMenuApi.SystemMenu>();
 const titleSuffix = ref<string>();
+
+function translateParentMenuOptions(
+  menus: SystemMenuApi.SystemMenu[],
+): SystemMenuApi.SystemMenu[] {
+  const currentMenuId = formData.value?.id;
+  return menus
+    .filter((menu) => menu.id !== currentMenuId)
+    .map((menu) => {
+      const title = menu.meta?.title;
+      return {
+        ...menu,
+        children: menu.children
+          ? translateParentMenuOptions(menu.children)
+          : undefined,
+        meta: menu.meta
+          ? {
+              ...menu.meta,
+              title: title && $te(title) ? $t(title) : title,
+            }
+          : menu.meta,
+      };
+    });
+}
 
 const schema: VbenFormSchema[] = [
   {
@@ -69,7 +92,8 @@ const schema: VbenFormSchema[] = [
   {
     component: 'ApiTreeSelect',
     componentProps: {
-      api: getMenuTree,
+      api: getMenuList,
+      afterFetch: translateParentMenuOptions,
       class: 'w-full',
       filterTreeNode(input: string, node: Recordable<any>) {
         if (!input || input.length === 0) {

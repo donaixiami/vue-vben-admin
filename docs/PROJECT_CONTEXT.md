@@ -113,6 +113,8 @@ The `web-ele` dev server uses `VITE_PORT=5777` in `apps/web-ele/.env.development
 - `internal/node-utils`: internal Node helpers used by scripts and build config.
 - `scripts/vsh`, `scripts/turbo-run`: local CLI/build workflow helpers.
 - `docs`: VitePress documentation application. This recovery file lives at the docs root intentionally and is not part of `docs/src` site routing.
+- `docs/VBEN_FRAMEWORK_NOTES.md`: condensed memory from the Vben framework guide pages. Read it before changing routing, access control, request setup, preferences, theme/styles, build/deploy behavior, or project tooling.
+- `vue-vben-admin-project/SKILL.md`: project-specific skill for future agents. Update it when project conventions, backend contracts, permission patterns, validation workflow, or repeated pitfalls change.
 
 `pnpm-workspace.yaml` still includes `packages/business/*`, but that directory does not exist in this working copy. Treat it as a reserved workspace pattern, not a missing dependency by itself.
 
@@ -383,6 +385,7 @@ These were present before this document was written:
 - Menu form uses Element Plus `AutoComplete` for component path suggestions.
 - The Element Plus `AutoComplete` adapter loads `ElAutocomplete` together with `autocomplete/style/css`; using `style/index` or passing the style import as a second `defineAsyncComponent` argument fails `vue-tsc`.
 - Menu form removed custom tree-select option rendering that double-translated menu titles.
+- Menu form parent menu selection uses `getMenuList()` (`/system/menu/list`) instead of backend accessible menus from `/system/menu/all`, translates `meta.title` locally for the tree-select labels, and filters out the menu being edited so it cannot be selected as its own parent.
 - Role permission tree node display now uses `value.meta.title` directly because `getMenuTree()` already translated titles.
 - Login log status tags use `type: 'success' | 'error'`, matching `ElTag`.
 - Dictionary list uses its own `SystemDictionaryApi.SystemDictionary` row type and Element Plus `ElMessage`/`ElMessageBox` for status confirmation and deletion. `updateDictionary()` accepts partial payloads for status-only updates, and dictionary delete ids use the dictionary entity id type.
@@ -406,15 +409,17 @@ When starting a new session:
 
 1. Run `git status --short --untracked-files=all`.
 2. Read this file first.
-3. If working on `web-ele`, inspect:
+3. Read `vue-vben-admin-project/SKILL.md` before modifying this workspace.
+4. Read `docs/VBEN_FRAMEWORK_NOTES.md` when the task touches Vben framework conventions such as routes, permissions, API request setup, preferences, theme/styles, build, or tooling.
+5. If working on `web-ele`, inspect:
    - `apps/web-ele/src/preferences.ts`
    - `apps/web-ele/src/api/request.ts`
    - `apps/web-ele/src/router/guard.ts`
    - `apps/web-ele/src/router/access.ts`
-4. For a dynamic menu/page issue, compare backend menu `component` with `apps/web-ele/src/views/**/*.vue`.
-5. For a table rendering issue, inspect `apps/web-ele/src/adapter/vxe-table.ts`.
-6. For a form component issue, inspect `apps/web-ele/src/adapter/component` and `apps/web-ele/src/adapter/form.ts`.
-7. After making behavior changes, update this document before finishing.
+6. For a dynamic menu/page issue, compare backend menu `component` with `apps/web-ele/src/views/**/*.vue`.
+7. For a table rendering issue, inspect `apps/web-ele/src/adapter/vxe-table.ts`.
+8. For a form component issue, inspect `apps/web-ele/src/adapter/component` and `apps/web-ele/src/adapter/form.ts`.
+9. After making behavior changes, update this document before finishing.
 
 ## Session Log
 
@@ -469,3 +474,7 @@ When starting a new session:
 - Split the module into `data.ts`, `modules/form.vue`, and `modules/query.ts`. Query normalization removes empty values and maps `created_at` ranges to `from_time`/`to_time`; a focused unit test covers this behavior.
 - Updated the system user drawer so the password field is commented out and submit normalization removes `password`, preventing the frontend from sending user passwords on create/update.
 - Added a system user list "reset password" operation wired to `PUT /system/user/:id/reset-password`; the action shows a confirmation dialog and relies on the backend initial password config.
+- Added backend menu data for the personal center route under the existing `_core` catalog: `Profile`, path `/_core/profile`, component `/_core/profile/index`, auth code `_core:profile`, and title key `page.auth.profile`.
+- Added role-management button permissions under the backend `system:role` menu. The role page now uses route child button auth codes `system:role:add`, `system:role:query`, `system:role:edit`, and `system:role:delete`; template buttons use `v-access:code`, and Vxe operation buttons use local `show` callbacks from `modules/permissions.ts`.
+- Read and summarized the Vben framework guide pages listed by the user into `docs/VBEN_FRAMEWORK_NOTES.md`, covering project model, local development, env/app config, routes/menus, access control, request integration, login, locale, theme/styles, icons, UI framework apps, build/deploy, tooling/tests, FAQ, and upgrade guidance.
+- Added the project-specific root skill at `vue-vben-admin-project/SKILL.md`. It captures workspace workflow, `apps/web-ele` conventions, backend-driven menu/permission rules, API/page patterns, validation commands, GitHub commit preferences, and the rule to keep the skill updated as project conventions evolve.

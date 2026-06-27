@@ -1,12 +1,15 @@
 <script lang="ts" setup>
 import type { Recordable } from '@vben/types';
 
+import type { RolePermissionCode } from './modules/permissions';
+
 import type {
   OnActionClickParams,
   VxeTableGridOptions,
 } from '#/adapter/vxe-table';
 import type { SystemRoleApi } from '#/api';
 
+import { useAccess } from '@vben/access';
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { Plus } from '@vben/icons';
 
@@ -18,11 +21,18 @@ import { $t } from '#/locales';
 
 import { useColumns, useGridFormSchema } from './data';
 import Form from './modules/form.vue';
+import { ROLE_PERMISSION_CODES } from './modules/permissions';
 
 const [FormDrawer, formDrawerApi] = useVbenDrawer({
   connectedComponent: Form,
   destroyOnClose: true,
 });
+
+const { hasAccessByCodes } = useAccess();
+
+function hasRolePermission(code: RolePermissionCode) {
+  return hasAccessByCodes([code]);
+}
 
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: {
@@ -31,7 +41,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
     submitOnChange: true,
   },
   gridOptions: {
-    columns: useColumns(onActionClick, onStatusChange),
+    columns: useColumns(onActionClick, onStatusChange, hasRolePermission),
     height: 'auto',
     keepSource: true,
     proxyConfig: {
@@ -158,7 +168,11 @@ function onCreate() {
     <!-- <ElButton type="danger" link> fdsfsf </ElButton> -->
     <Grid :table-title="$t('system.role.list')">
       <template #toolbar-tools>
-        <ElButton type="primary" @click="onCreate">
+        <ElButton
+          v-access:code="ROLE_PERMISSION_CODES.add"
+          type="primary"
+          @click="onCreate"
+        >
           <Plus class="size-5" />
           {{ $t('ui.actionTitle.create', [$t('system.role.name')]) }}
         </ElButton>

@@ -1,9 +1,16 @@
+import type { RolePermissionChecker } from './modules/permissions';
+
 import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { SystemRoleApi } from '#/api';
 
 import { z } from '#/adapter/form';
 import { $t } from '#/locales';
+
+import {
+  buildRoleOperationOptions,
+  ROLE_PERMISSION_CODES,
+} from './modules/permissions';
 
 export function useFormSchema(): VbenFormSchema[] {
   return [
@@ -97,6 +104,7 @@ export function useGridFormSchema(): VbenFormSchema[] {
 export function useColumns<T = SystemRoleApi.SystemRole>(
   onActionClick: OnActionClickFn<T>,
   onStatusChange?: (newStatus: any, row: T) => PromiseLike<boolean | undefined>,
+  hasPermission: RolePermissionChecker = () => true,
 ): VxeTableGridOptions['columns'] {
   return [
     {
@@ -112,7 +120,10 @@ export function useColumns<T = SystemRoleApi.SystemRole>(
     },
     {
       cellRender: {
-        attrs: { beforeChange: onStatusChange },
+        attrs: {
+          beforeChange: onStatusChange,
+          disabled: () => !hasPermission(ROLE_PERMISSION_CODES.edit),
+        },
         name: onStatusChange ? 'CellSwitch' : 'CellTag',
       },
       field: 'status',
@@ -138,6 +149,7 @@ export function useColumns<T = SystemRoleApi.SystemRole>(
           onClick: onActionClick,
         },
         name: 'CellOperation',
+        options: buildRoleOperationOptions(hasPermission),
       },
       field: 'operation',
       fixed: 'right',
