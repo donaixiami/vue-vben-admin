@@ -95,6 +95,10 @@ async function updateUserStatus(
   return requestClient.put(`/system/user/status/${id}`, data);
 }
 
+async function resetUserPassword(id: string) {
+  return requestClient.put(`/system/user/${id}/reset-password`);
+}
+
 /**
  * 删除用户
  * @param id 用户 ID
@@ -108,6 +112,7 @@ export {
   deleteUser,
   getUserById,
   getUserList,
+  resetUserPassword,
   updateUser,
   updateUserStatus,
 };

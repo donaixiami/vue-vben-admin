@@ -39,6 +39,7 @@ export namespace SystemNotificationsApi {
   }
 
   export interface NotificationInboxItem {
+    avatar?: string;
     created_at: null | string;
     delivered_at: null | string;
     id: number;

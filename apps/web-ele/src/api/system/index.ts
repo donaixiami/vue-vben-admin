@@ -1,4 +1,5 @@
 export * from './category-type';
+export * from './config';
 export * from './dept';
 export * from './dictionary';
 export * from './file';

@@ -1,3 +1,4 @@
+import type { MessageTypeCellTagOption } from './modules/message-type';
 import type { SendStateCellTagOption } from './modules/send-state';
 
 import type { VbenFormSchema } from '#/adapter/form';
@@ -221,6 +222,44 @@ export function useGridFormSchema(): VbenFormSchema[] {
       label: '消息ID',
     },
     {
+      component: 'ApiSelect',
+      componentProps: {
+        api: async () => {
+          const dictionary = await getDictionaryByIdentifier('message_type');
+          return Array.isArray(dictionary?.value) ? dictionary.value : [];
+        },
+        afterFetch: (data: Array<{ label: string; value: string }>) => {
+          return data.map((item) => ({
+            label: item.label,
+            value: item.value,
+          }));
+        },
+        clearable: true,
+        placeholder: '请选择消息类型',
+      },
+      fieldName: 'type',
+      label: '消息类型',
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: {
+        api: async () => {
+          const dictionary = await getDictionaryByIdentifier('send_state');
+          return Array.isArray(dictionary?.value) ? dictionary.value : [];
+        },
+        afterFetch: (data: Array<{ label: string; value: string }>) => {
+          return data.map((item) => ({
+            label: item.label,
+            value: item.value,
+          }));
+        },
+        clearable: true,
+        placeholder: '请选择发送状态',
+      },
+      fieldName: 'send_status',
+      label: '发送状态',
+    },
+    {
       component: 'RangePicker',
       fieldName: 'created_at',
       label: $t('system.role.createTime'),
@@ -232,6 +271,7 @@ export function useGridFormSchema(): VbenFormSchema[] {
 export function useColumns<T = SystemNotificationsApi.SystemNotifications>(
   onActionClick: OnActionClickFn<T>,
   sendStateOptions: SendStateCellTagOption[] = [],
+  messageTypeOptions: MessageTypeCellTagOption[] = [],
 ): VxeTableGridOptions['columns'] {
   return [
     {
@@ -248,10 +288,7 @@ export function useColumns<T = SystemNotificationsApi.SystemNotifications>(
     {
       cellRender: {
         name: 'CellTag',
-        options: [
-          { value: 'system', label: '系统通知', type: 'primary' },
-          { value: 'message', label: '普通消息', type: 'success' },
-        ],
+        options: messageTypeOptions,
       },
       field: 'type',
       title: '通知类型',

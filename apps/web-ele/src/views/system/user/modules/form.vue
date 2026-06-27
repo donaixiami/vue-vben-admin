@@ -84,24 +84,24 @@ function useFormSchema(): VbenFormSchema[] {
         .max(20, '用户名最多为20个字符')
         .regex(/^[a-zA-Z0-9_]+$/, '用户名只能是字母、数字'),
     },
-    {
-      componentProps: {
-        placeholder: '请输入密码',
-        type: 'password',
-        showPassword: true,
-      },
-      component: 'Input',
-      fieldName: 'password',
-      label: '密码',
-      defaultValue: '123456',
-      rules: 'required',
-      dependencies: {
-        triggerFields: ['id'],
-        async show() {
-          return !id.value;
-        },
-      },
-    },
+    // {
+    //   componentProps: {
+    //     placeholder: '请输入密码',
+    //     type: 'password',
+    //     showPassword: true,
+    //   },
+    //   component: 'Input',
+    //   fieldName: 'password',
+    //   label: '密码',
+    //   defaultValue: '123456',
+    //   rules: 'required',
+    //   dependencies: {
+    //     triggerFields: ['id'],
+    //     async show() {
+    //       return !id.value;
+    //     },
+    //   },
+    // },
     {
       rules: 'required',
       component: 'ApiTreeSelect',
@@ -267,6 +267,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
       url: string;
     };
     delete values.avatars;
+    delete values.password;
     if (response && response.id) {
       values.avatar_file_id = Number(response.id);
     }

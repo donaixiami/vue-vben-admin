@@ -24,6 +24,7 @@ export function useFormSchema(
         .string()
         .min(2, $t('ui.formRules.minLength', [$t('system.menu.menuName'), 2]))
         .max(30, $t('ui.formRules.maxLength', [$t('system.menu.menuName'), 30]))
+        .regex(/^[A-Za-z_]+$/, '唯一标识只能包含字母和下划线')
         .refine(
           async (value: string) => {
             return !(await isMenuIdentifierExists(value, formData.value?.id));

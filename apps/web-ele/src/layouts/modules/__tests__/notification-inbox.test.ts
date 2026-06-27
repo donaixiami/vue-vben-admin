@@ -9,26 +9,31 @@ import {
 describe('notification inbox mapper', () => {
   it('maps inbox API items to layout notification items', () => {
     expect(
-      mapNotificationInboxItem({
-        created_at: '2026-06-26 10:00:00',
-        delivered_at: '2026-06-26 10:05:00',
-        id: 1,
-        is_read: false,
-        message: 'message body',
-        notification_id: 10,
-        priority: 'medium',
-        read_at: null,
-        related_link: '/workspace',
-        title: 'notice title',
-        type: 'system',
-      }),
+      mapNotificationInboxItem(
+        {
+          avatar: 'https://cdn.test/avatar.png',
+          created_at: '2026-06-26 10:00:00',
+          delivered_at: '2026-06-26 10:05:00',
+          id: 1,
+          is_read: false,
+          message: 'message body',
+          notification_id: 10,
+          priority: 'medium',
+          read_at: null,
+          related_link: '/workspace',
+          title: 'notice title',
+          type: 'system',
+        },
+        [{ label: '系统公告', type: 'primary', value: 'system' }],
+      ),
     ).toEqual({
-      avatar: DEFAULT_NOTIFICATION_AVATAR,
+      avatar: 'https://cdn.test/avatar.png',
       date: '2026-06-26 10:05:00',
       id: 1,
       isRead: false,
       link: '/workspace',
       message: 'message body',
+      tag: { label: '系统公告', type: 'primary' },
       title: 'notice title',
     });
   });
@@ -59,6 +64,6 @@ describe('notification inbox mapper', () => {
   });
 
   it('maps inbox item lists', () => {
-    expect(mapNotificationInboxList([])).toEqual([]);
+    expect(mapNotificationInboxList([], [])).toEqual([]);
   });
 });

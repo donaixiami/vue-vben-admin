@@ -115,6 +115,16 @@ const routes: RouteRecordRaw[] = [
       title: $t('page.auth.profile'),
     },
   },
+  {
+    name: 'MyMessages',
+    path: '/my-messages',
+    component: () => import('#/views/_core/my-messages/index.vue'),
+    meta: {
+      icon: 'lucide:mail',
+      hideInMenu: true,
+      title: '我的消息',
+    },
+  },
 ];
 
 export default routes;

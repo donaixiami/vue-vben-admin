@@ -23,7 +23,38 @@ import { $t } from '#/locales';
 
 import { useColumns, useGridFormSchema } from './data';
 import Form from './modules/form.vue';
+import { loadMessageTypeTagOptions } from './modules/message-type';
 import { loadSendStateTagOptions } from './modules/send-state';
+
+function isEmptyQueryValue(value: unknown) {
+  return (
+    value === undefined ||
+    value === null ||
+    value === '' ||
+    (Array.isArray(value) && value.length === 0)
+  );
+}
+
+function normalizeNotificationQueryParams(
+  formValues: Record<string, unknown>,
+): SystemNotificationsApi.QueryNotificationsParams {
+  const { created_at, ...restValues } = formValues;
+  const params = Object.fromEntries(
+    Object.entries(restValues).filter(([, value]) => !isEmptyQueryValue(value)),
+  ) as SystemNotificationsApi.QueryNotificationsParams;
+
+  if (Array.isArray(created_at) && created_at.length === 2) {
+    const [fromTime, toTime] = created_at;
+    if (!isEmptyQueryValue(fromTime)) {
+      params.from_time = String(fromTime);
+    }
+    if (!isEmptyQueryValue(toTime)) {
+      params.to_time = String(toTime);
+    }
+  }
+
+  return params;
+}
 
 const [FormDrawer, formDrawerApi] = useVbenDrawer({
   connectedComponent: Form,
@@ -44,20 +75,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
     proxyConfig: {
       ajax: {
         query: async ({ page }, formValues) => {
-          const { created_at } = formValues;
-          const params = formValues;
-          if (
-            created_at &&
-            Array.isArray(created_at) &&
-            created_at.length === 2
-          ) {
-            params.form_time = created_at[0];
-            params.to_time = created_at[1];
-          }
+          const params = normalizeNotificationQueryParams(formValues);
           const list = await getNotificationsList({
             page: page.currentPage,
             pageSize: page.pageSize,
-            ...formValues,
+            ...params,
           });
           return list;
         },
@@ -78,9 +100,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
 });
 
 onMounted(async () => {
-  const sendStateOptions = await loadSendStateTagOptions();
+  const [sendStateOptions, messageTypeOptions] = await Promise.all([
+    loadSendStateTagOptions(),
+    loadMessageTypeTagOptions(),
+  ]);
   gridApi.setGridOptions({
-    columns: useColumns(onActionClick, sendStateOptions),
+    columns: useColumns(onActionClick, sendStateOptions, messageTypeOptions),
   });
 });
 

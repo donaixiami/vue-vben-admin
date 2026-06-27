@@ -1,7 +1,10 @@
 <script lang="ts" setup>
 import type { Recordable } from '@vben/types';
 
-import type { OnActionClickParams, VxeTableGridOptions } from '#/adapter/vxe-table';
+import type {
+  OnActionClickParams,
+  VxeTableGridOptions,
+} from '#/adapter/vxe-table';
 import type { SystemUserApi } from '#/api/system/user';
 
 import { Page, useVbenDrawer } from '@vben/common-ui';
@@ -10,7 +13,12 @@ import { Plus } from '@vben/icons';
 import { ElButton, ElMessage, ElMessageBox } from 'element-plus';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { deleteUser, getUserList, updateUserStatus } from '#/api/system/user';
+import {
+  deleteUser,
+  getUserList,
+  resetUserPassword,
+  updateUserStatus,
+} from '#/api/system/user';
 import { $t } from '#/locales';
 
 import { useColumns, useGridFormSchema } from './data';
@@ -39,7 +47,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
         query: async ({ page }, formValues) => {
           const { created_at } = formValues;
           const params = formValues;
-          if (created_at && Array.isArray(created_at) && created_at.length === 2) {
+          if (
+            created_at &&
+            Array.isArray(created_at) &&
+            created_at.length === 2
+          ) {
             params.form_time = created_at[0];
             params.to_time = created_at[1];
           }
@@ -75,6 +87,10 @@ function onActionClick(e: OnActionClickParams<SystemUserApi.SystemUser>) {
       onEdit(e.row);
       break;
     }
+    case 'reset-password': {
+      onResetPassword(e.row);
+      break;
+    }
   }
 }
 
@@ -97,7 +113,10 @@ function confirm(content: string, title: string) {
  * @param row 行数据
  * @returns 返回false则中止改变，返回其他值（undefined、true）则允许改变
  */
-async function onStatusChange(newStatus: number, row: SystemUserApi.SystemUser) {
+async function onStatusChange(
+  newStatus: number,
+  row: SystemUserApi.SystemUser,
+) {
   const status: Recordable<string> = {
     0: '禁用',
     1: '启用',
@@ -128,6 +147,30 @@ function onDelete(row: SystemUserApi.SystemUser) {
     .then(() => {
       ElMessage.success($t('ui.actionMessage.deleteSuccess', [row.name]));
       onRefresh();
+    })
+    .finally(() => {
+      msg.close();
+    });
+}
+
+async function onResetPassword(row: SystemUserApi.SystemUser) {
+  try {
+    await confirm(
+      `确定重置用户 ${row.username} 的密码吗？重置后将使用系统初始密码。`,
+      '重置密码确认',
+    );
+  } catch {
+    return;
+  }
+
+  const msg = ElMessage({
+    duration: 0,
+    message: `正在重置用户 ${row.username} 的密码...`,
+  });
+
+  resetUserPassword(row.id)
+    .then(() => {
+      ElMessage.success(`用户 ${row.username} 密码重置成功`);
     })
     .finally(() => {
       msg.close();

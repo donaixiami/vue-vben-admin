@@ -1,3 +1,8 @@
+interface NotificationTag {
+  label: string;
+  type?: string;
+}
+
 interface NotificationItem {
   id: number | string;
   avatar: string;
@@ -12,6 +17,7 @@ interface NotificationItem {
   link?: string;
   query?: Record<string, any>;
   state?: Record<string, any>;
+  tag?: NotificationTag | string;
 }
 
-export type { NotificationItem };
+export type { NotificationItem, NotificationTag };

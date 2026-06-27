@@ -1,6 +1,6 @@
 import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
-import type { SystemRoleApi } from '#/api';
+import type { SystemUserApi } from '#/api/system/user';
 
 import { $t } from '#/locales';
 
@@ -48,7 +48,7 @@ export function useGridFormSchema(): VbenFormSchema[] {
   ];
 }
 
-export function useColumns<T = SystemRoleApi.SystemRole>(
+export function useColumns<T = SystemUserApi.SystemUser>(
   onActionClick: OnActionClickFn<T>,
   onStatusChange?: (newStatus: any, row: T) => PromiseLike<boolean | undefined>,
 ): VxeTableGridOptions['columns'] {
@@ -60,7 +60,10 @@ export function useColumns<T = SystemRoleApi.SystemRole>(
     },
     {
       // 宽高class比为1:1，避免图片拉伸
-      cellRender: { name: 'CellImage', attrs: { fit: 'cover', class: 'w-20 h-20 ' } },
+      cellRender: {
+        name: 'CellImage',
+        attrs: { fit: 'cover', class: 'w-20 h-20 ' },
+      },
       field: 'avatar',
       title: '头像',
       width: 130,
@@ -123,6 +126,13 @@ export function useColumns<T = SystemRoleApi.SystemRole>(
             show: (row: any) => row.root !== 1,
           },
           {
+            code: 'reset-password',
+            contentText: '重置密码',
+            link: true,
+            show: (row: any) => row.root !== 1,
+            type: 'primary',
+          },
+          {
             code: 'delete',
             show: (row: any) => row.root !== 1,
           },
@@ -131,7 +141,7 @@ export function useColumns<T = SystemRoleApi.SystemRole>(
       field: 'operation',
       fixed: 'right',
       title: $t('system.role.operation'),
-      width: 130,
+      width: 210,
     },
   ];
 }

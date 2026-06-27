@@ -297,6 +297,7 @@ System modules:
 - Dictionary: list, identifier existence check, create, update, delete.
 - Category type: list/tree, create, update, delete.
 - Notifications: management list/detail/create/update/delete plus publish/revoke, and current-user inbox list/unread-count/read/read-all/delete.
+- System config: list/detail/key lookup/key uniqueness/create/update/delete through `/system/config/*`.
 - File: list/detail/upload/upload OSS/delete.
 - Login log: list, delete, clear through `/monitor/login-log/*`.
 
@@ -325,6 +326,8 @@ Typical table setup:
 - Pagination passes `page.currentPage` and `page.pageSize`.
 - Row identity uses `rowConfig.keyField = 'id'`.
 - Operations use the global `CellOperation` renderer.
+
+For new `apps/web-ele` business pages, do not keep table columns, API proxy config, and action handlers all inside `index.vue`. Keep `index.vue` focused on page composition and move reusable table/data/action logic into nearby module files such as `modules/data.ts` and `modules/actions.ts`, following the existing system module pattern.
 
 Menu management is tree-shaped:
 
@@ -454,3 +457,15 @@ When starting a new session:
 - Switched the notifications list `send_state` column to dictionary-driven `CellTag` options. `useColumns` now accepts a `sendStateOptions` parameter, and the list page loads `send_state` plus `send_state_color` dictionaries, merges them by shared `value`, and maps the color dictionary label to the Element Plus tag `type`.
 - Updated the notifications `publish_at` picker to prevent past publish times and to pass a current `defaultTime`, so selecting a date keeps the current hour/minute/second instead of resetting to `00:00:00`.
 - Replaced the Element Plus layout notification mock list with `getNotificationsInbox({ page: 1, pageSize: 10 })`. Inbox API rows are mapped through `layouts/modules/notification-inbox.ts` so layout `NotificationItem` field changes stay isolated.
+
+### 2026-06-27
+
+- Added the `apps/web-ele/src/views/_core/my-messages` page for current-user inbox messages and split it into `index.vue`, `modules/data.ts`, and `modules/actions.ts`. Keep future page work split this way instead of putting table configuration, API wiring, and action handlers all in `index.vue`.
+
+### 2026-06-28
+
+- Added the Element Plus system config frontend module for the backend `src/modules/system_config` APIs. The API wrapper lives in `apps/web-ele/src/api/system/config.ts` and is exported from `#/api`.
+- Added the page component at `apps/web-ele/src/views/system/config/list.vue`; backend-driven menus should use component path `/system/config/list`.
+- Split the module into `data.ts`, `modules/form.vue`, and `modules/query.ts`. Query normalization removes empty values and maps `created_at` ranges to `from_time`/`to_time`; a focused unit test covers this behavior.
+- Updated the system user drawer so the password field is commented out and submit normalization removes `password`, preventing the frontend from sending user passwords on create/update.
+- Added a system user list "reset password" operation wired to `PUT /system/user/:id/reset-password`; the action shows a confirmation dialog and relies on the backend initial password config.

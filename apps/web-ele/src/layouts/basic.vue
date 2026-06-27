@@ -18,21 +18,32 @@ import { preferences } from '@vben/preferences';
 import { useAccessStore, useUserStore } from '@vben/stores';
 import { openWindow } from '@vben/utils';
 
-import { getNotificationsInbox } from '#/api/system/notifications';
+import { ElMessageBox } from 'element-plus';
+
+import {
+  getNotificationsInbox,
+  markAllNotificationInboxRead,
+  markNotificationInboxRead,
+} from '#/api/system/notifications';
 import { $t } from '#/locales';
 import { useAuthStore } from '#/store';
 import LoginForm from '#/views/_core/authentication/login.vue';
+import { loadMessageTypeTagOptions } from '#/views/system/notifications/modules/message-type';
 
 import { mapNotificationInboxList } from './modules/notification-inbox';
 
 const notifications = ref<NotificationItem[]>([]);
 
 async function loadNotifications() {
-  const { items } = await getNotificationsInbox({
-    page: 1,
-    pageSize: 10,
-  });
-  notifications.value = mapNotificationInboxList(items);
+  const [messageTypeOptions, { items }] = await Promise.all([
+    loadMessageTypeTagOptions(),
+    getNotificationsInbox({
+      page: 1,
+      pageSize: 10,
+    }),
+  ]);
+
+  notifications.value = mapNotificationInboxList(items, messageTypeOptions);
 }
 
 onMounted(() => {
@@ -97,7 +108,27 @@ function handleNoticeClear() {
   notifications.value = [];
 }
 
-function markRead(id: number | string) {
+function handleViewAllMessages() {
+  void router.push({ name: 'MyMessages' });
+}
+
+function confirmNotificationAction(content: string, title: string) {
+  return ElMessageBox.confirm(content, title, {
+    cancelButtonText: '取消',
+    confirmButtonText: '确定',
+    type: 'warning',
+  });
+}
+
+async function markRead(id: number | string) {
+  try {
+    await confirmNotificationAction('确定将该消息标记为已读吗？', '已读确认');
+  } catch {
+    return;
+  }
+
+  await markNotificationInboxRead(Number(id));
+
   const item = notifications.value.find((item) => item.id === id);
   if (item) {
     item.isRead = true;
@@ -108,7 +139,18 @@ function remove(id: number | string) {
   notifications.value = notifications.value.filter((item) => item.id !== id);
 }
 
-function handleMakeAll() {
+async function handleMakeAll() {
+  try {
+    await confirmNotificationAction(
+      '确定将全部消息标记为已读吗？',
+      '全部已读确认',
+    );
+  } catch {
+    return;
+  }
+
+  await markAllNotificationInboxRead();
+
   notifications.value.forEach((item) => (item.isRead = true));
 }
 watch(
@@ -149,11 +191,14 @@ watch(
       <Notification
         :dot="showDot"
         :notifications="notifications"
+        :render-html="true"
+        :show-clear="false"
         :show-remove="false"
         @clear="handleNoticeClear"
         @read="(item) => item.id && markRead(item.id)"
         @remove="(item) => item.id && remove(item.id)"
         @make-all="handleMakeAll"
+        @view-all="handleViewAllMessages"
       />
     </template>
     <template #extra>

@@ -1,10 +1,11 @@
 <script lang="ts" setup>
-import type { NotificationItem } from './types';
+import type { NotificationItem, NotificationTag } from './types';
 
 import { useRouter } from 'vue-router';
 
 import { Bell, CircleCheckBig, CircleX, MailCheck } from '@vben/icons';
 import { $t } from '@vben/locales';
+import { sanitizeRichTextHtml } from '@vben/utils';
 
 import {
   VbenButton,
@@ -24,6 +25,8 @@ interface Props {
    * 消息列表
    */
   notifications?: NotificationItem[];
+  renderHtml?: boolean;
+  showClear?: boolean;
   showRemove?: boolean;
 }
 
@@ -32,6 +35,8 @@ defineOptions({ name: 'NotificationPopup' });
 withDefaults(defineProps<Props>(), {
   dot: false,
   notifications: () => [],
+  renderHtml: false,
+  showClear: true,
   showRemove: true,
 });
 
@@ -68,6 +73,28 @@ function handleClick(item: NotificationItem) {
   if (item.link) {
     navigateTo(item.link, item.query, item.state);
   }
+}
+
+function getTagLabel(tag?: NotificationItem['tag']) {
+  return typeof tag === 'string' ? tag : tag?.label;
+}
+
+function getTagType(tag?: NotificationItem['tag']) {
+  return typeof tag === 'string' ? undefined : tag?.type;
+}
+
+function getTagClass(tag?: NotificationTag | string) {
+  const tagType = getTagType(tag);
+  const tagClassMap: Record<string, string> = {
+    danger: 'bg-destructive text-destructive-foreground',
+    error: 'bg-destructive text-destructive-foreground',
+    info: 'bg-muted text-muted-foreground',
+    primary: 'bg-primary text-primary-foreground',
+    success: 'bg-emerald-500 text-white',
+    warning: 'bg-amber-500 text-white',
+  };
+
+  return tagClassMap[tagType ?? 'primary'] ?? tagClassMap.primary;
 }
 
 function navigateTo(
@@ -125,17 +152,34 @@ function navigateTo(
                 class="absolute top-2 right-2 size-2 rounded-sm bg-primary"
               ></span>
 
-              <span
-                class="relative flex size-10 shrink-0 overflow-hidden rounded-full"
-              >
-                <img
-                  :src="item.avatar"
-                  class="aspect-square size-full object-cover"
-                />
-              </span>
+              <div class="flex shrink-0 flex-col items-center gap-1.5">
+                <span
+                  class="relative flex size-10 overflow-hidden rounded-full"
+                >
+                  <img
+                    :src="item.avatar"
+                    class="aspect-square size-full object-cover"
+                  />
+                </span>
+                <span
+                  v-if="getTagLabel(item.tag)"
+                  class="max-w-14 truncate rounded-sm px-1.5 py-0.5 text-[10px] leading-none"
+                  :class="getTagClass(item.tag)"
+                >
+                  {{ getTagLabel(item.tag) }}
+                </span>
+              </div>
               <div class="flex flex-col gap-1 leading-none">
                 <p class="font-semibold">{{ item.title }}</p>
-                <p class="my-1 line-clamp-2 text-xs text-muted-foreground">
+                <p
+                  v-if="renderHtml"
+                  class="my-1 line-clamp-2 text-xs text-muted-foreground"
+                  :innerHTML="sanitizeRichTextHtml(item.message)"
+                ></p>
+                <p
+                  v-else
+                  class="my-1 line-clamp-2 text-xs text-muted-foreground"
+                >
                   {{ item.message }}
                 </p>
                 <p class="line-clamp-2 text-xs text-muted-foreground">
@@ -149,7 +193,7 @@ function navigateTo(
                   v-if="!item.isRead"
                   size="xs"
                   variant="ghost"
-                  class="h-6 px-2"
+                  class="h-6 cursor-pointer px-2"
                   :tooltip="$t('common.confirm')"
                   @click.stop="emit('read', item)"
                 >
@@ -178,9 +222,11 @@ function navigateTo(
       </template>
 
       <div
-        class="flex items-center justify-between border-t border-border px-4 py-3"
+        class="flex items-center border-t border-border px-4 py-3"
+        :class="showClear ? 'justify-between' : 'justify-end'"
       >
         <VbenButton
+          v-if="showClear"
           :disabled="notifications.length <= 0"
           size="sm"
           variant="ghost"
