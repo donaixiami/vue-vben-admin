@@ -485,3 +485,9 @@ When starting a new session:
 - Refined rich-text image resize output so persisted HTML keeps only image size data, such as `width`, and no longer writes resize plugin layout attributes such as `containerstyle` or `wrapperstyle`. The editor also hides the plugin's left/center/right position controller so users only resize images, not align them.
 - Added a temporary single-file real-time chat test page at `apps/web-ele/src/views/_core/chat/index.vue`. Backend-driven menus can point to component `/_core/chat/index`. The page keeps WebSocket/SSE connection setup, history loading, sending, and raw event inspection in one file until the backend chat contract is finalized.
 - Updated the core menu API wrapper so `getAllMenusApi()` filters backend `type: "button"` nodes before route generation. The backend still returns button permission children from `/system/menu/all`, but Vue Router route records must only include route-capable catalog/menu nodes; otherwise it warns about records such as `/system/menu` missing component or children.
+
+### 2026-07-08
+
+- Added chat multi-device sync handling to the temporary real-time chat test page. The backend now emits `messageSync` to every member's `user_{userId}` personal room, including the sender, and emits `readSync` for same-account read-state synchronization.
+- Added `apps/web-ele/src/views/_core/chat/modules/message-sync.ts` with message-key normalization and a seen-message tracker. The chat page consumes both `receiveMessage` and `messageSync`, deduplicating by server `id` first and `clientMsgId/client_msg_id` second so a device can safely receive both session-room and personal-room events.
+- History loading now resets and repopulates the seen-message tracker, which prevents reconnect/history refresh from duplicating messages already rendered from realtime events.
