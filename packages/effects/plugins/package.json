@@ -63,6 +63,7 @@
     "@vueuse/motion": "catalog:",
     "echarts": "catalog:",
     "lucide-vue-next": "catalog:",
+    "tiptap-extension-resize-image": "1.4.4",
     "vue": "catalog:",
     "vxe-pc-ui": "catalog:",
     "vxe-table": "catalog:"

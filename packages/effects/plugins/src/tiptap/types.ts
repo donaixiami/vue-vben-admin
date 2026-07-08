@@ -25,9 +25,16 @@ export interface ImageUploadOptions {
   ) => Promise<string>;
 }
 
+export interface ImageResizeOptions {
+  maxWidth?: number;
+  minWidth?: number;
+}
+
 export interface TipTapProps {
   editable?: boolean;
   extensions?: Extensions;
+  imageResizable?: boolean;
+  imageResize?: ImageResizeOptions;
   imageUpload?: ImageUploadOptions;
   minHeight?: number | string;
   maxHeight?: number | string;
@@ -49,6 +56,8 @@ export interface VbenTiptapChangeEvent {
 }
 
 export interface VbenTiptapExtensionOptions {
+  imageResizable?: boolean;
+  imageResize?: ImageResizeOptions;
   imageUpload?: ImageUploadOptions;
   /** 内部使用：追踪 blob URL 以便组件销毁时清理 */
   _blobUrlTracker?: Set<string>;

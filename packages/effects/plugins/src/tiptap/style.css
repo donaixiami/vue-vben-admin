@@ -49,6 +49,10 @@
   max-width: min(100%, 640px);
 }
 
+.vben-tiptap-content [data-resize-image-ui='position-controller'] {
+  display: none !important;
+}
+
 /* Image upload states */
 .vben-tiptap-upload-wrapper {
   position: relative;

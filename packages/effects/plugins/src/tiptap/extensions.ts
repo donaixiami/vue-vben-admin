@@ -3,7 +3,11 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { EditorView } from '@tiptap/pm/view';
 import type { Extensions } from '@tiptap/vue-3';
 
-import type { ImageUploadOptions, VbenTiptapExtensionOptions } from './types';
+import type {
+  ImageResizeOptions,
+  ImageUploadOptions,
+  VbenTiptapExtensionOptions,
+} from './types';
 
 import { $t } from '@vben/locales';
 
@@ -17,8 +21,71 @@ import TextAlign from '@tiptap/extension-text-align';
 import { Color, TextStyle } from '@tiptap/extension-text-style';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
+import ImageResize from 'tiptap-extension-resize-image';
 
 const DEFAULT_ACCEPT = 'image/*';
+const DEFAULT_IMAGE_RESIZE: Required<ImageResizeOptions> = {
+  maxWidth: 640,
+  minWidth: 80,
+};
+const IMAGE_NODE_NAMES = new Set(['image', 'imageResize']);
+const PIXEL_WIDTH_RE = /(?:^|;)\s*width\s*:\s*(\d+(?:\.\d+)?)px\s*(?:;|$)/i;
+
+function normalizePixelWidth(value?: null | string) {
+  if (!value) {
+    return;
+  }
+
+  const width = Number.parseFloat(value);
+  return Number.isFinite(width) && width > 0
+    ? `${Math.round(width)}px`
+    : undefined;
+}
+
+function extractWidthFromStyle(value?: null | string) {
+  const match = value?.match(PIXEL_WIDTH_RE);
+  return normalizePixelWidth(match?.[1]);
+}
+
+function getImageResizeContainerStyle(element: HTMLElement) {
+  const containerStyle = element.getAttribute('containerstyle');
+  const width =
+    extractWidthFromStyle(containerStyle) ??
+    normalizePixelWidth(element.getAttribute('width')) ??
+    extractWidthFromStyle(element.style.cssText);
+
+  return width ? `width: ${width};` : null;
+}
+
+const CleanImageResize = ImageResize.extend({
+  addAttributes() {
+    const parentAttributes = this.parent?.() ?? {};
+
+    return {
+      ...parentAttributes,
+      containerStyle: {
+        ...(parentAttributes as Record<string, any>).containerStyle,
+        default: null,
+        parseHTML: (element: HTMLElement) =>
+          getImageResizeContainerStyle(element),
+        renderHTML: () => ({}),
+      },
+      wrapperStyle: {
+        ...(parentAttributes as Record<string, any>).wrapperStyle,
+        default: null,
+        parseHTML: () => null,
+        renderHTML: () => ({}),
+      },
+    };
+  },
+});
+
+function getImageResizeOptions(options?: ImageResizeOptions) {
+  return {
+    maxWidth: options?.maxWidth ?? DEFAULT_IMAGE_RESIZE.maxWidth,
+    minWidth: options?.minWidth ?? DEFAULT_IMAGE_RESIZE.minWidth,
+  };
+}
 
 function validateFile(
   file: File,
@@ -59,7 +126,7 @@ function findPlaceholderPos(doc: ProseMirrorNode, blobUrl: string): number {
   doc.descendants((node: ProseMirrorNode, offset: number) => {
     if (found !== -1) return false;
     if (
-      node.type.name === 'image' &&
+      IMAGE_NODE_NAMES.has(node.type.name) &&
       node.attrs.src === blobUrl &&
       node.attrs['data-uploading'] === 'true'
     ) {
@@ -81,6 +148,7 @@ function createUploadProcess(
   file: File,
   options: ImageUploadOptions,
   blobUrlTracker?: Set<string>,
+  imageNodeName = 'image',
   pos?: number,
 ): UploadContext {
   const blobUrl = URL.createObjectURL(file);
@@ -96,7 +164,7 @@ function createUploadProcess(
         'data-uploading': 'true',
         src: blobUrl,
       },
-      type: 'image',
+      type: imageNodeName,
     })
     .run();
 
@@ -178,8 +246,13 @@ function createUploadProcess(
 function createCustomImage(
   imageUpload: ImageUploadOptions,
   blobUrlTracker?: Set<string>,
+  imageResizable = true,
+  imageResize?: ImageResizeOptions,
 ) {
-  return Image.extend({
+  const imageNodeName = imageResizable ? 'imageResize' : 'image';
+  const ImageExtension = imageResizable ? CleanImageResize : Image;
+
+  return ImageExtension.extend({
     addAttributes() {
       return {
         ...this.parent?.(),
@@ -201,11 +274,13 @@ function createCustomImage(
     },
 
     addNodeView() {
-      return ({ node }) => {
+      const parentNodeView = this.parent?.();
+      return (props) => {
+        const { node } = props;
         const isUploading = node.attrs['data-uploading'] === 'true';
 
         if (!isUploading) {
-          return null as any;
+          return parentNodeView ? parentNodeView(props) : (null as any);
         }
 
         const wrapper = document.createElement('div');
@@ -289,7 +364,13 @@ function createCustomImage(
                 return;
               }
 
-              createUploadProcess(cmdEditor, file, imageUpload, blobUrlTracker);
+              createUploadProcess(
+                cmdEditor,
+                file,
+                imageUpload,
+                blobUrlTracker,
+                imageNodeName,
+              );
               input.remove();
             });
 
@@ -345,6 +426,7 @@ function createCustomImage(
                 file,
                 imageUpload,
                 blobUrlTracker,
+                imageNodeName,
                 pos,
               );
               return true;
@@ -390,12 +472,19 @@ function createCustomImage(
                 imageFile,
                 imageUpload,
                 blobUrlTracker,
+                imageNodeName,
               );
               return true;
             },
           },
         }),
       ];
+    },
+  }).configure({
+    ...(imageResizable ? getImageResizeOptions(imageResize) : {}),
+    allowBase64: true,
+    HTMLAttributes: {
+      class: 'vben-tiptap__image',
     },
   });
 }
@@ -431,18 +520,20 @@ export function createDefaultTiptapExtensions(
       ? createCustomImage(
           options.imageUpload,
           options._blobUrlTracker,
-        ).configure({
-          allowBase64: true,
-          HTMLAttributes: {
-            class: 'vben-tiptap__image',
+          options.imageResizable !== false,
+          options.imageResize,
+        )
+      : (options.imageResizable === false ? Image : CleanImageResize).configure(
+          {
+            ...(options.imageResizable === false
+              ? {}
+              : getImageResizeOptions(options.imageResize)),
+            allowBase64: true,
+            HTMLAttributes: {
+              class: 'vben-tiptap__image',
+            },
           },
-        })
-      : Image.configure({
-          allowBase64: true,
-          HTMLAttributes: {
-            class: 'vben-tiptap__image',
-          },
-        }),
+        ),
     Placeholder.configure({
       placeholder: options.placeholder ?? $t('ui.tiptap.placeholder'),
     }),

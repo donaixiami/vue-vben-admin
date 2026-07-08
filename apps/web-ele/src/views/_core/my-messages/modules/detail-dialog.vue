@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { SystemNotificationsApi } from '#/api/system/notifications';
 
-import { sanitizeRichTextHtml } from '@vben/utils';
+import { VbenTiptapPreview } from '@vben/plugins/tiptap';
 
 import { ElDialog } from 'element-plus';
 
@@ -26,9 +26,10 @@ const open = defineModel<boolean>('open', {
         </div>
       </div>
       <div
-        class="max-h-[50vh] overflow-auto rounded-[var(--radius)] border border-border bg-muted/30 p-4 text-sm leading-6"
-        :innerHTML="sanitizeRichTextHtml(message.message)"
-      ></div>
+        class="max-h-[50vh] overflow-auto rounded-[var(--radius)] border border-border bg-muted/30 p-4"
+      >
+        <VbenTiptapPreview :content="message.message" :min-height="120" />
+      </div>
     </div>
   </ElDialog>
 </template>

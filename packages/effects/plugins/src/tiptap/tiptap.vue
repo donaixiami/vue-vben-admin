@@ -26,6 +26,8 @@ import './style.css';
 const props = withDefaults(defineProps<TipTapProps>(), {
   editable: true,
   extensions: undefined,
+  imageResizable: true,
+  imageResize: undefined,
   imageUpload: undefined,
   minHeight: 240,
   maxHeight: 400,
@@ -64,6 +66,8 @@ const editor = useEditor({
     props.extensions ??
     createDefaultTiptapExtensions({
       _blobUrlTracker: blobUrlTracker,
+      imageResizable: props.imageResizable,
+      imageResize: props.imageResize,
       imageUpload: props.imageUpload,
       placeholder: props.placeholder,
     }),

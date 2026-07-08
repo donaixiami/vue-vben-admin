@@ -48,6 +48,7 @@
     "dayjs": "catalog:",
     "element-plus": "catalog:",
     "pinia": "catalog:",
+    "socket.io-client": "^4.8.3",
     "vue": "catalog:",
     "vue-router": "catalog:"
   },
