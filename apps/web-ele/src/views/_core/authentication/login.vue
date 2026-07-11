@@ -1,17 +1,20 @@
 <script lang="ts" setup>
 import type { VbenFormSchema } from '@vben/common-ui';
-import type { BasicOption } from '@vben/types';
+import type { BasicOption, Recordable } from '@vben/types';
 
-import { computed, markRaw } from 'vue';
+import { computed, markRaw, ref } from 'vue';
 
-import { AuthenticationLogin, SliderCaptcha, z } from '@vben/common-ui';
+import { AuthenticationLogin, z } from '@vben/common-ui';
 import { $t } from '@vben/locales';
 
 import { useAuthStore } from '#/store';
 
+import ServerSliderCaptcha from './server-slider-captcha.vue';
+
 defineOptions({ name: 'Login' });
 
 const authStore = useAuthStore();
+const captchaResetKey = ref(0);
 
 const MOCK_USER_OPTIONS: BasicOption[] = [
   {
@@ -79,21 +82,36 @@ const formSchema = computed((): VbenFormSchema[] => {
       rules: z.string().min(1, { message: $t('authentication.passwordTip') }),
     },
     {
-      component: markRaw(SliderCaptcha),
-      fieldName: 'captcha',
-      rules: z.boolean().refine((value) => value, {
-        message: $t('authentication.verifyRequiredTip'),
-      }),
+      component: markRaw(ServerSliderCaptcha),
+      componentProps: {
+        disabled: authStore.loginLoading,
+        resetKey: captchaResetKey.value,
+      },
+      fieldName: 'captchaToken',
+      rules: z
+        .string()
+        .min(1, { message: $t('authentication.verifyRequiredTip') }),
     },
   ];
 });
+
+async function handleSubmit(values: Recordable<any>) {
+  try {
+    await authStore.authLogin(
+      values as Parameters<typeof authStore.authLogin>[0],
+    );
+  } catch (error) {
+    captchaResetKey.value += 1;
+    throw error;
+  }
+}
 </script>
 
 <template>
   <AuthenticationLogin
     :form-schema="formSchema"
     :loading="authStore.loginLoading"
-    @submit="authStore.authLogin"
+    @submit="handleSubmit"
     :show-forget-password="false"
     :show-code-login="false"
     :show-qrcode-login="false"

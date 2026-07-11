@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AuthApi } from '../auth';
+
+import { beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import { getCaptchaChallengeApi, verifyCaptchaApi } from '../auth';
 
@@ -38,5 +40,15 @@ describe('captcha auth API', () => {
     await verifyCaptchaApi(data);
 
     expect(post).toHaveBeenCalledWith('/auth/captcha/verify', data);
+  });
+});
+
+describe('login auth API types', () => {
+  it('requires exactly the three login credential strings', () => {
+    expectTypeOf<AuthApi.LoginParams>().toEqualTypeOf<{
+      captchaToken: string;
+      password: string;
+      username: string;
+    }>();
   });
 });

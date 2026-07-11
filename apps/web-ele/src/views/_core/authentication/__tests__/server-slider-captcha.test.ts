@@ -578,6 +578,42 @@ describe('server slider captcha', () => {
     expect(getChallenge).toHaveBeenCalledTimes(2);
   });
 
+  it('resets and obtains a new challenge when resetKey changes', async () => {
+    getChallenge.mockResolvedValue(challenge);
+    const wrapper = mount(ServerSliderCaptcha, { props: { resetKey: 0 } });
+    await flushPromises();
+
+    await wrapper.setProps({ resetKey: 1 });
+    await flushPromises();
+
+    expect(resume).toHaveBeenCalled();
+    expect(getChallenge).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores pointer and keyboard interaction while disabled', async () => {
+    getChallenge.mockResolvedValue(challenge);
+    const wrapper = mount(ServerSliderCaptcha, { props: { disabled: true } });
+    await flushPromises();
+    const slider = sliderOf(wrapper);
+
+    slider.vm.$emit('start', { pageY: 0 });
+    slider.vm.$emit('move', { event: { pageY: 0 }, moveX: 100 });
+    slider.vm.$emit('end', { pageY: 0 });
+    await wrapper.get('[data-test="image-area"]').trigger('keydown', {
+      key: 'ArrowRight',
+    });
+    await wrapper.get('[data-test="image-area"]').trigger('keydown', {
+      key: 'Enter',
+    });
+    await flushPromises();
+
+    expect(solveProof).not.toHaveBeenCalled();
+    expect(verifyCaptcha).not.toHaveBeenCalled();
+    expect(
+      wrapper.get('[data-test="image-area"]').attributes('aria-disabled'),
+    ).toBe('true');
+  });
+
   it('keeps a reset challenge when an aborted proof resolves late', async () => {
     getChallenge.mockResolvedValue(challenge);
     const wrapper = mountCaptcha();

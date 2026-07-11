@@ -3,9 +3,9 @@ import { baseRequestClient, requestClient } from '#/api/request';
 export namespace AuthApi {
   /** 登录接口参数 */
   export interface LoginParams {
-    captchaToken?: string;
-    password?: string;
-    username?: string;
+    captchaToken: string;
+    password: string;
+    username: string;
   }
 
   export interface TrackPoint {

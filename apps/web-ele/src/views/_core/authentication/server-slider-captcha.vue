@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import type { AuthApi } from '#/api/core/auth';
 
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from 'vue';
 
 import { SliderCaptcha } from '@vben/common-ui';
 
@@ -17,6 +24,17 @@ interface SliderMoveData {
 interface SliderCaptchaExposed {
   resume: () => void;
 }
+
+const props = withDefaults(
+  defineProps<{
+    disabled?: boolean;
+    resetKey?: number;
+  }>(),
+  {
+    disabled: false,
+    resetKey: 0,
+  },
+);
 
 const modelValue = defineModel<string>({ default: '' });
 
@@ -269,7 +287,8 @@ function appendInterpolatedPoint(x: number, y: number, elapsed: number) {
 }
 
 function beginAttempt(y: number) {
-  if (!challenge.value || loading.value || passed.value) return;
+  if (props.disabled || !challenge.value || loading.value || passed.value)
+    return;
   clearAttempt();
   statusText.value = '请拖动滑块完成拼图';
   startTime = performance.now();
@@ -284,7 +303,7 @@ function handleStart(event: MouseEvent | TouchEvent) {
 
 function handleMove({ event, moveX }: SliderMoveData) {
   const current = challenge.value;
-  if (!current || !dragging) return;
+  if (props.disabled || !current || !dragging) return;
   const action = sliderArea.value?.querySelector<HTMLElement>(
     '[name="captcha-action"]',
   );
@@ -311,7 +330,8 @@ async function failAttempt() {
 
 async function finishAttempt(finalY: number) {
   const current = challenge.value;
-  if (!current || !dragging || loading.value || passed.value) return;
+  if (props.disabled || !current || !dragging || loading.value || passed.value)
+    return;
   const generation = attemptGeneration;
   dragging = false;
   const realElapsed = elapsedTime();
@@ -386,7 +406,7 @@ async function handleEnd(event: MouseEvent | TouchEvent) {
 
 function handleKeyboard(event: KeyboardEvent) {
   const current = challenge.value;
-  if (!current || loading.value || passed.value) return;
+  if (props.disabled || !current || loading.value || passed.value) return;
   if (event.key === 'Enter') {
     if (!dragging) return;
     event.preventDefault();
@@ -412,12 +432,19 @@ async function reset() {
 }
 
 function handleTouchCancel() {
-  if (!dragging && !proofController) return;
+  if (props.disabled || (!dragging && !proofController)) return;
   slider.value?.resume();
   void loadChallenge();
 }
 
 defineExpose({ reset });
+
+watch(
+  () => props.resetKey,
+  () => {
+    void reset();
+  },
+);
 
 onMounted(() => {
   void loadChallenge();
@@ -447,7 +474,7 @@ onBeforeUnmount(() => {
       v-if="challenge"
       ref="imageArea"
       aria-label="滑块拼图验证图片"
-      :aria-disabled="loading || passed"
+      :aria-disabled="props.disabled || loading || passed"
       :aria-valuemax="challenge.movementWidth"
       aria-valuemin="0"
       :aria-valuenow="Math.round(pieceX)"
@@ -455,7 +482,7 @@ onBeforeUnmount(() => {
       class="relative w-full max-w-[320px] touch-none overflow-hidden rounded-md"
       data-test="image-area"
       role="slider"
-      tabindex="0"
+      :tabindex="props.disabled ? -1 : 0"
       :style="{ height: `${imageHeight}px` }"
       @keydown="handleKeyboard"
     >
@@ -486,6 +513,7 @@ onBeforeUnmount(() => {
         ref="slider"
         :action-style="sliderActionStyle"
         class="mt-3 touch-none"
+        :class="{ 'pointer-events-none opacity-60': props.disabled }"
         is-slot
         :model-value="passed"
         success-text="验证通过"
