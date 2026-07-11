@@ -3,8 +3,43 @@ import { baseRequestClient, requestClient } from '#/api/request';
 export namespace AuthApi {
   /** 登录接口参数 */
   export interface LoginParams {
+    captchaToken?: string;
     password?: string;
     username?: string;
+  }
+
+  export interface TrackPoint {
+    t: number;
+    x: number;
+    y: number;
+  }
+
+  export interface CaptchaChallengeResult {
+    backgroundImage: string;
+    challengeId: string;
+    expiresIn: number;
+    imageHeight: number;
+    imageWidth: number;
+    movementWidth: number;
+    pieceImage: string;
+    pieceWidth: number;
+    pieceY: number;
+    proofDifficulty: number;
+    proofNonce: string;
+  }
+
+  export interface VerifyCaptchaParams {
+    challengeId: string;
+    duration: number;
+    finalX: number;
+    proofCounter: number;
+    track: TrackPoint[];
+    width: number;
+  }
+
+  export interface VerifyCaptchaResult {
+    captchaToken: string;
+    expiresIn: number;
   }
 
   /** 登录接口返回值 */
@@ -23,6 +58,19 @@ export namespace AuthApi {
  */
 export async function loginApi(data: AuthApi.LoginParams) {
   return requestClient.post<AuthApi.LoginResult>('/auth/login', data);
+}
+
+export async function getCaptchaChallengeApi() {
+  return requestClient.post<AuthApi.CaptchaChallengeResult>(
+    '/auth/captcha/challenge',
+  );
+}
+
+export async function verifyCaptchaApi(data: AuthApi.VerifyCaptchaParams) {
+  return requestClient.post<AuthApi.VerifyCaptchaResult>(
+    '/auth/captcha/verify',
+    data,
+  );
 }
 
 /**
