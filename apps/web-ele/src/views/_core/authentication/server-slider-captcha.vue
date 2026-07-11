@@ -23,6 +23,7 @@ const modelValue = defineModel<string>({ default: '' });
 const challenge = ref<AuthApi.CaptchaChallengeResult>();
 const imageArea = ref<HTMLDivElement>();
 const slider = ref<SliderCaptchaExposed>();
+const sliderArea = ref<HTMLDivElement>();
 const displayWidth = ref(320);
 const pieceX = ref(0);
 const loading = ref(true);
@@ -88,6 +89,25 @@ function clearAttempt() {
   dragging = false;
 }
 
+function expireChallenge() {
+  clearChallengeTimer();
+  clearAttempt();
+  challenge.value = undefined;
+  loading.value = true;
+  statusText.value = '正在加载验证图片…';
+  slider.value?.resume();
+}
+
+function scheduleExpiry(expiresIn: number) {
+  challengeTimer = setTimeout(
+    () => {
+      expireChallenge();
+      void loadChallenge(false);
+    },
+    Math.max(0, expiresIn * 1000),
+  );
+}
+
 async function loadChallenge(showLoading = true) {
   const requestId = ++challengeRequestId;
   clearChallengeTimer();
@@ -105,13 +125,7 @@ async function loadChallenge(showLoading = true) {
     statusText.value = '请拖动滑块完成拼图';
     await nextTick();
     measure();
-    challengeTimer = setTimeout(
-      () => {
-        slider.value?.resume();
-        void loadChallenge(false);
-      },
-      Math.max(0, result.expiresIn * 1000),
-    );
+    scheduleExpiry(result.expiresIn);
     return true;
   } catch {
     if (destroyed || requestId !== challengeRequestId) return false;
@@ -123,13 +137,12 @@ async function loadChallenge(showLoading = true) {
 }
 
 function elapsedTime() {
-  return Math.max(0, Math.ceil(performance.now() - startTime));
+  return Math.max(0, Math.round(performance.now() - startTime));
 }
 
 function appendPoint(x: number, y: number, elapsed: number) {
   const points = track.value;
-  const previous = points.at(-1);
-  const t = previous ? Math.max(previous.t + 1, elapsed) : Math.max(0, elapsed);
+  const t = Math.max(0, Math.round(elapsed));
   points.push({ t, x: Math.round(x), y: Math.round(y) });
 }
 
@@ -139,7 +152,7 @@ function appendInterpolatedPoint(x: number, y: number, elapsed: number) {
     appendPoint(x, y, elapsed);
     return;
   }
-  const targetT = Math.max(previous.t + 1, elapsed);
+  const targetT = Math.max(previous.t, Math.round(elapsed));
   const timeSteps = Math.ceil((targetT - previous.t) / 40);
   const distanceSteps = Math.ceil(Math.abs(x - previous.x) / 20);
   const steps = Math.max(1, timeSteps, distanceSteps);
@@ -170,10 +183,13 @@ function handleStart(event: MouseEvent | TouchEvent) {
 function handleMove({ event, moveX }: SliderMoveData) {
   const current = challenge.value;
   if (!current || !dragging) return;
-  const actualMovementWidth = Math.max(
-    1,
-    displayWidth.value - current.pieceWidth * scale.value,
+  const action = sliderArea.value?.querySelector<HTMLElement>(
+    '[name="captcha-action"]',
   );
+  const wrapperWidth =
+    sliderArea.value?.getBoundingClientRect().width || displayWidth.value;
+  const actionWidth = action?.offsetWidth || Math.max(18, pieceSize.value - 6);
+  const actualMovementWidth = Math.max(1, wrapperWidth - actionWidth - 6);
   lastX = Math.max(
     0,
     Math.min(
@@ -200,7 +216,7 @@ async function finishAttempt(finalY: number) {
   dragging = false;
   const realElapsed = elapsedTime();
   appendInterpolatedPoint(lastX, finalY - startY, realElapsed);
-  const duration = Math.max(realElapsed, track.value.at(-1)?.t ?? 0);
+  const duration = realElapsed;
   if (duration < 250) {
     await failAttempt();
     return;
@@ -239,13 +255,7 @@ async function finishAttempt(finalY: number) {
     passed.value = true;
     loading.value = false;
     statusText.value = '验证通过';
-    challengeTimer = setTimeout(
-      () => {
-        slider.value?.resume();
-        void loadChallenge(false);
-      },
-      Math.max(0, result.expiresIn * 1000),
-    );
+    scheduleExpiry(result.expiresIn);
   } catch (error) {
     if (
       destroyed ||
@@ -353,19 +363,20 @@ onBeforeUnmount(() => {
       />
     </div>
 
-    <SliderCaptcha
-      v-if="challenge"
-      ref="slider"
-      :action-style="sliderActionStyle"
-      class="mt-3"
-      is-slot
-      :model-value="passed"
-      success-text="验证通过"
-      text="请拖动滑块完成拼图"
-      @end="handleEnd"
-      @move="handleMove"
-      @start="handleStart"
-    />
+    <div v-if="challenge" ref="sliderArea" data-test="slider-area">
+      <SliderCaptcha
+        ref="slider"
+        :action-style="sliderActionStyle"
+        class="mt-3"
+        is-slot
+        :model-value="passed"
+        success-text="验证通过"
+        text="请拖动滑块完成拼图"
+        @end="handleEnd"
+        @move="handleMove"
+        @start="handleStart"
+      />
+    </div>
 
     <p class="mt-2 min-h-5 text-sm" role="status">
       {{ statusText }}

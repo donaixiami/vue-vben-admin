@@ -29,7 +29,10 @@ vi.mock('@vben/common-ui', async () => {
       emits: ['end', 'move', 'start'],
       setup(_, { expose }) {
         expose({ resume });
-        return () => h('div', { 'data-test': 'slider' });
+        return () =>
+          h('div', { 'data-test': 'slider' }, [
+            h('div', { name: 'captcha-action' }),
+          ]);
       },
     }),
   };
@@ -64,6 +67,30 @@ function lastVerifyParams() {
   expect(params).toBeDefined();
   if (!params) throw new Error('Expected captcha verification parameters');
   return params;
+}
+
+function setSliderMetrics(
+  wrapper: ReturnType<typeof mountCaptcha>,
+  wrapperWidth: number,
+  actionWidth: number,
+) {
+  const sliderArea = wrapper.get('[data-test="slider-area"]');
+  vi.spyOn(sliderArea.element, 'getBoundingClientRect').mockReturnValue({
+    bottom: 40,
+    height: 40,
+    left: 0,
+    right: wrapperWidth,
+    top: 0,
+    width: wrapperWidth,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  });
+  Object.defineProperty(
+    wrapper.get('[name="captcha-action"]').element,
+    'offsetWidth',
+    { configurable: true, value: actionWidth },
+  );
 }
 
 async function loadedCaptcha() {
@@ -125,12 +152,13 @@ describe('server slider captcha', () => {
     window.dispatchEvent(new Event('resize'));
     await nextTick();
 
+    setSliderMetrics(wrapper, 160, 18);
     const slider = sliderOf(wrapper);
     slider.vm.$emit('start', { pageY: 100 });
     now = 1050;
-    slider.vm.$emit('move', { event: { pageY: 102 }, moveX: 35 });
+    slider.vm.$emit('move', { event: { pageY: 102 }, moveX: 34 });
     now = 1300;
-    slider.vm.$emit('move', { event: { pageY: 104 }, moveX: 139 });
+    slider.vm.$emit('move', { event: { pageY: 104 }, moveX: 136 });
     now = 1400;
     slider.vm.$emit('end', { pageY: 105 });
     await flushPromises();
@@ -148,6 +176,40 @@ describe('server slider captcha', () => {
       params.track.length,
     );
     expect(params.track.at(-1)).toMatchObject({ x: 278, y: 5, t: 400 });
+    const pieceStyle = (
+      wrapper.get('[data-test="piece"]').element as HTMLElement
+    ).style;
+    expect(
+      Number.parseFloat(pieceStyle.left) + Number.parseFloat(pieceStyle.width),
+    ).toBeLessThanOrEqual(160);
+  });
+
+  it('does not inflate dense same-millisecond events or duration', async () => {
+    const wrapper = await loadedCaptcha();
+    solveProof.mockResolvedValue(2);
+    verifyCaptcha.mockResolvedValue({ captchaToken: 'token', expiresIn: 120 });
+    let now = 1000;
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+    const slider = sliderOf(wrapper);
+    slider.vm.$emit('start', { pageY: 0 });
+    for (let index = 0; index < 300; index += 1) {
+      slider.vm.$emit('move', {
+        event: { pageY: 0 },
+        moveX: index % 100,
+      });
+    }
+    now = 1250;
+    slider.vm.$emit('end', { pageY: 0 });
+    await flushPromises();
+
+    const params = lastVerifyParams();
+    expect(params.duration).toBe(250);
+    expect(
+      params.track.slice(0, 5).every(({ t }: { t: number }) => t === 0),
+    ).toBe(true);
+    expect(Math.max(...params.track.map(({ t }: { t: number }) => t))).toBe(
+      250,
+    );
   });
 
   it('supports touchend changedTouches coordinates', async () => {
@@ -250,6 +312,43 @@ describe('server slider captcha', () => {
     expect(getChallenge).toHaveBeenCalledTimes(2);
   });
 
+  it('disables an expired token before a replacement challenge resolves', async () => {
+    vi.useFakeTimers();
+    let resolveChallenge!: (value: typeof challenge) => void;
+    getChallenge
+      .mockResolvedValueOnce(challenge)
+      .mockImplementationOnce(
+        () => new Promise((resolve) => (resolveChallenge = resolve)),
+      );
+    const wrapper = mountCaptcha();
+    await flushPromises();
+    solveProof.mockResolvedValue(4);
+    verifyCaptcha.mockResolvedValue({
+      captchaToken: 'captcha-token',
+      expiresIn: 1,
+    });
+    let now = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+    const slider = sliderOf(wrapper);
+    slider.vm.$emit('start', { pageY: 0 });
+    now = 300;
+    slider.vm.$emit('move', { event: { pageY: 0 }, moveX: 100 });
+    now = 350;
+    slider.vm.$emit('end', { pageY: 0 });
+    await flushPromises();
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['']);
+    expect(wrapper.find('[data-test="background"]').exists()).toBe(false);
+    expect(wrapper.find('[data-test="slider"]').exists()).toBe(false);
+    resolveChallenge(challenge);
+    await flushPromises();
+    expect(wrapper.find('[data-test="background"]').exists()).toBe(true);
+    expect(sliderOf(wrapper).attributes('model-value')).toBe('false');
+    wrapper.unmount();
+  });
+
   it('does not verify an unrealistically short drag and refreshes the challenge', async () => {
     getChallenge.mockResolvedValue(challenge);
     const wrapper = mountCaptcha();
@@ -348,7 +447,7 @@ describe('server slider captcha', () => {
     expect(getChallenge).toHaveBeenCalledTimes(2);
   });
 
-  it('never reports a duration shorter than the real elapsed time', async () => {
+  it('reports the rounded real elapsed duration', async () => {
     const wrapper = await loadedCaptcha();
     solveProof.mockResolvedValue(1);
     verifyCaptcha.mockResolvedValue({ captchaToken: 'token', expiresIn: 120 });
@@ -362,8 +461,7 @@ describe('server slider captcha', () => {
     await flushPromises();
 
     const params = lastVerifyParams();
-    expect(params.duration).toBeGreaterThanOrEqual(251);
-    expect(params.duration).toBe(params.track.at(-1)?.t);
+    expect(params.duration).toBe(250);
   });
 
   it('automatically refreshes an expired challenge', async () => {
@@ -376,6 +474,58 @@ describe('server slider captcha', () => {
     await flushPromises();
 
     expect(getChallenge).toHaveBeenCalledTimes(2);
+  });
+
+  it('removes an expired challenge before its replacement resolves', async () => {
+    vi.useFakeTimers();
+    getChallenge
+      .mockResolvedValueOnce({ ...challenge, expiresIn: 1 })
+      .mockReturnValueOnce(new Promise(() => {}));
+    const wrapper = mountCaptcha();
+    await flushPromises();
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(wrapper.find('[data-test="background"]').exists()).toBe(false);
+    expect(wrapper.find('[data-test="slider"]').exists()).toBe(false);
+  });
+
+  it('removes an expired challenge when refreshing fails', async () => {
+    vi.useFakeTimers();
+    getChallenge
+      .mockResolvedValueOnce({ ...challenge, expiresIn: 1 })
+      .mockRejectedValueOnce(new Error('offline'));
+    const wrapper = mountCaptcha();
+    await flushPromises();
+
+    await vi.advanceTimersByTimeAsync(1000);
+    await flushPromises();
+
+    expect(wrapper.find('[data-test="background"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('验证图片加载失败，请重试');
+  });
+
+  it('ignores duplicate end events while verification is running', async () => {
+    const wrapper = await loadedCaptcha();
+    let resolveProof!: (counter: number) => void;
+    solveProof.mockImplementation(
+      () => new Promise<number>((resolve) => (resolveProof = resolve)),
+    );
+    verifyCaptcha.mockResolvedValue({ captchaToken: 'token', expiresIn: 120 });
+    let now = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+    const slider = sliderOf(wrapper);
+    slider.vm.$emit('start', { pageY: 0 });
+    now = 300;
+    slider.vm.$emit('move', { event: { pageY: 0 }, moveX: 100 });
+    now = 350;
+    slider.vm.$emit('end', { pageY: 0 });
+    slider.vm.$emit('end', { pageY: 0 });
+    resolveProof(1);
+    await flushPromises();
+
+    expect(solveProof).toHaveBeenCalledOnce();
+    expect(verifyCaptcha).toHaveBeenCalledOnce();
   });
 
   it('aborts an in-flight proof when unmounted', async () => {

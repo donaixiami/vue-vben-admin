@@ -61,6 +61,51 @@ describe('solveCaptchaProof', () => {
     await expect(solving).rejects.toMatchObject({ name: 'AbortError' });
   });
 
+  it('rejects immediately when aborted even if digests never settle', async () => {
+    const controller = new AbortController();
+    const removeListener = vi.spyOn(controller.signal, 'removeEventListener');
+    vi.spyOn(crypto.subtle, 'digest').mockReturnValue(new Promise(() => {}));
+    const solving = solveCaptchaProof(
+      'challenge-1',
+      'nonce-1',
+      3,
+      5_000_000,
+      controller.signal,
+    );
+    controller.abort();
+
+    const outcome = await Promise.race([
+      solving.then(
+        () => 'resolved',
+        (error: unknown) =>
+          error instanceof DOMException ? error.name : 'rejected',
+      ),
+      new Promise<string>((resolve) =>
+        setTimeout(() => resolve('timeout'), 20),
+      ),
+    ]);
+
+    expect(outcome).toBe('AbortError');
+    expect(removeListener).toHaveBeenCalledWith('abort', expect.any(Function));
+  });
+
+  it('includes counter 5,000,000 in the search range', async () => {
+    vi.spyOn(crypto.subtle, 'digest').mockResolvedValue(
+      new Uint8Array(32).buffer,
+    );
+
+    await expect(
+      solveCaptchaProof(
+        'challenge-1',
+        'nonce-1',
+        3,
+        5_000_000,
+        undefined,
+        5_000_000,
+      ),
+    ).resolves.toBe(5_000_000);
+  });
+
   it.each([
     [2, [0x00, 0xFF]],
     [3, [0x00, 0x0F]],
