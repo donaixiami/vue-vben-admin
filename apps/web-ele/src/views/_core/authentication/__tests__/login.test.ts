@@ -57,6 +57,22 @@ function submitHandler(wrapper: ReturnType<typeof mountLogin>) {
   return handler as (values: Record<string, unknown>) => Promise<unknown>;
 }
 
+function deferred<T>() {
+  let reject!: (reason?: unknown) => void;
+  let resolve!: (value: PromiseLike<T> | T) => void;
+  const promise = new Promise<T>((nextResolve, nextReject) => {
+    resolve = nextResolve;
+    reject = nextReject;
+  });
+  return { promise, reject, resolve };
+}
+
+const loginValues = {
+  captchaToken: 'captcha-token',
+  password: 'secret',
+  username: 'admin',
+};
+
 describe('login page', () => {
   beforeEach(() => {
     authStore.authLogin.mockReset();
@@ -77,40 +93,64 @@ describe('login page', () => {
     expect(captcha?.rules.safeParse('captcha-token').success).toBe(true);
   });
 
-  it('increments the captcha reset signal when login fails', async () => {
-    authStore.authLogin.mockRejectedValue(new Error('login failed'));
+  it('uses one in-flight login request for consecutive submits', async () => {
+    const login = deferred<{ userInfo: null }>();
+    authStore.authLogin.mockReturnValue(login.promise);
+    const wrapper = mountLogin();
+    const submit = submitHandler(wrapper);
+
+    const first = submit(loginValues);
+    const second = submit(loginValues);
+    await nextTick();
+
+    expect(authStore.authLogin).toHaveBeenCalledOnce();
+    expect(schemaOf(wrapper)[2]?.componentProps?.disabled).toBe(true);
+    login.resolve({ userInfo: null });
+    await Promise.all([first, second]);
+  });
+
+  it('resets captcha once and restores submission after login fails', async () => {
+    const login = deferred<{ userInfo: null }>();
+    authStore.authLogin.mockReturnValue(login.promise);
     const wrapper = mountLogin();
     const initialResetKey = schemaOf(wrapper)[2]?.componentProps?.resetKey;
+    const submit = submitHandler(wrapper);
+    const request = submit(loginValues);
+    const duplicate = submit(loginValues);
+    await nextTick();
 
-    await expect(
-      submitHandler(wrapper)({
-        captchaToken: 'captcha-token',
-        password: 'secret',
-        username: 'admin',
-      }),
-    ).rejects.toThrow('login failed');
+    expect(authStore.authLogin).toHaveBeenCalledOnce();
+    expect(schemaOf(wrapper)[2]?.componentProps?.disabled).toBe(true);
+    login.reject(new Error('login failed'));
+
+    await expect(Promise.all([request, duplicate])).rejects.toThrow(
+      'login failed',
+    );
     await nextTick();
 
     expect(schemaOf(wrapper)[2]?.componentProps?.resetKey).toBe(
       Number(initialResetKey) + 1,
     );
+    expect(schemaOf(wrapper)[2]?.componentProps?.disabled).toBe(false);
   });
 
-  it('does not reset the captcha when login succeeds', async () => {
-    authStore.authLogin.mockResolvedValue({ userInfo: null });
+  it('restores submission without resetting captcha after login succeeds', async () => {
+    const login = deferred<{ userInfo: null }>();
+    authStore.authLogin.mockReturnValue(login.promise);
     const wrapper = mountLogin();
     const initialResetKey = schemaOf(wrapper)[2]?.componentProps?.resetKey;
+    const request = submitHandler(wrapper)(loginValues);
+    await nextTick();
 
-    await submitHandler(wrapper)({
-      captchaToken: 'captcha-token',
-      password: 'secret',
-      username: 'admin',
-    });
+    expect(schemaOf(wrapper)[2]?.componentProps?.disabled).toBe(true);
+    login.resolve({ userInfo: null });
+    await request;
     await flushPromises();
 
     expect(schemaOf(wrapper)[2]?.componentProps?.resetKey).toBe(
       initialResetKey,
     );
+    expect(schemaOf(wrapper)[2]?.componentProps?.disabled).toBe(false);
   });
 
   it('disables captcha interaction while login is loading', () => {

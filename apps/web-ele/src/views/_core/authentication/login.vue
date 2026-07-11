@@ -15,6 +15,9 @@ defineOptions({ name: 'Login' });
 
 const authStore = useAuthStore();
 const captchaResetKey = ref(0);
+const submitting = ref(false);
+
+let submitPromise: Promise<void> | undefined;
 
 const MOCK_USER_OPTIONS: BasicOption[] = [
   {
@@ -84,7 +87,7 @@ const formSchema = computed((): VbenFormSchema[] => {
     {
       component: markRaw(ServerSliderCaptcha),
       componentProps: {
-        disabled: authStore.loginLoading,
+        disabled: authStore.loginLoading || submitting.value,
         resetKey: captchaResetKey.value,
       },
       fieldName: 'captchaToken',
@@ -95,15 +98,24 @@ const formSchema = computed((): VbenFormSchema[] => {
   ];
 });
 
-async function handleSubmit(values: Recordable<any>) {
-  try {
-    await authStore.authLogin(
-      values as Parameters<typeof authStore.authLogin>[0],
-    );
-  } catch (error) {
-    captchaResetKey.value += 1;
-    throw error;
-  }
+function handleSubmit(values: Recordable<any>) {
+  if (submitPromise) return submitPromise;
+
+  submitting.value = true;
+  const current = authStore
+    .authLogin(values as Parameters<typeof authStore.authLogin>[0])
+    .then(() => undefined)
+    .catch((error) => {
+      captchaResetKey.value += 1;
+      throw error;
+    })
+    .finally(() => {
+      if (submitPromise !== current) return;
+      submitting.value = false;
+      submitPromise = undefined;
+    });
+  submitPromise = current;
+  return current;
 }
 </script>
 
