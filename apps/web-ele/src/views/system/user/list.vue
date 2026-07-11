@@ -188,13 +188,13 @@ function onCreate() {
 <template>
   <Page auto-content-height>
     <FormDrawer @success="onRefresh" />
-    <div class="flex h-full gap-4">
+    <div class="flex h-full flex-col gap-4 lg:flex-row">
       <div
-        class="bg-sidebar dark:bg-sidebar w-[300px] min-w-[280px] rounded-[var(--radius)] border-color border-[1px]"
+        class="bg-sidebar dark:bg-sidebar w-full min-w-0 flex-none rounded-[var(--radius)] border-color border-[1px] lg:w-[280px]"
       >
         <Tree :grid-api="gridApi" />
       </div>
-      <div class="flex-1">
+      <div class="min-w-0 flex-1">
         <Grid table-title="用户列表">
           <template #toolbar-tools>
             <ElButton type="primary" @click="onCreate">

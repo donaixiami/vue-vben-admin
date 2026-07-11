@@ -30,7 +30,7 @@ const defaultProps = {
 watch(filterText, (val) => {
   // eslint误判了这里的filter所以直接忽略了检测
   // eslint-disable-next-line unicorn/no-array-callback-reference
-  treeRef.value!.filter(val);
+  treeRef.value?.filter(val);
 });
 const filterNode: FilterNodeMethodFunction = (value: string, data: Tree) => {
   if (!value) return true;
@@ -66,7 +66,11 @@ function onCurrentChange(key: Tree) {
 <template>
   <div>
     <div class="p-3 border-b-1">组织机构</div>
-    <ElInput v-model="filterText" class="w-60 mb-2 border-b-1 p-2" placeholder="部门搜索" />
+    <ElInput
+      v-model="filterText"
+      class="mb-2 w-full border-b-1 p-2"
+      placeholder="部门搜索"
+    />
     <div class="p-2 pt-0">
       <ElTree
         node-key="id"

@@ -13,6 +13,24 @@ const SYSTEM_FLAG_OPTIONS = [
   { label: '否', type: 'info', value: false },
 ];
 
+const SENSITIVE_CONFIG_KEYS = new Set(['sys.user.initPassword']);
+const SENSITIVE_VALUE_MASK = '••••••••';
+
+function formatConfigValue({
+  cellValue,
+  row,
+}: {
+  cellValue?: unknown;
+  row: Pick<SystemConfigApi.SystemConfig, 'config_key'>;
+}) {
+  if (SENSITIVE_CONFIG_KEYS.has(row.config_key)) {
+    return SENSITIVE_VALUE_MASK;
+  }
+  return cellValue === null || cellValue === undefined
+    ? ''
+    : String(cellValue);
+}
+
 export function useFormSchema(
   formData: Ref<SystemConfigApi.SystemConfig | undefined>,
 ): VbenFormSchema[] {
@@ -155,6 +173,7 @@ export function useColumns<T = SystemConfigApi.SystemConfig>(
     },
     {
       field: 'config_value',
+      formatter: formatConfigValue,
       minWidth: 260,
       showOverflow: 'tooltip',
       title: '参数键值',
@@ -170,6 +189,7 @@ export function useColumns<T = SystemConfigApi.SystemConfig>(
     },
     {
       field: 'remark',
+      formatter: formatConfigValue,
       minWidth: 180,
       showOverflow: 'tooltip',
       title: '备注',

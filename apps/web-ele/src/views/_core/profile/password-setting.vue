@@ -56,7 +56,7 @@ function handleSubmit() {
 </script>
 <template>
   <ProfilePasswordSetting
-    class="w-1/3"
+    class="w-full lg:w-1/3"
     :form-schema="formSchema"
     @submit="handleSubmit"
   />

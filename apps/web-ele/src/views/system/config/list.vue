@@ -11,7 +11,11 @@ import { Plus } from '@vben/icons';
 import { ElButton, ElMessage } from 'element-plus';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { deleteSystemConfig, getSystemConfigList } from '#/api';
+import {
+  deleteSystemConfig,
+  getSystemConfigById,
+  getSystemConfigList,
+} from '#/api';
 import { $t } from '#/locales';
 
 import { useColumns, useGridFormSchema } from './data';
@@ -71,8 +75,9 @@ function onActionClick(e: OnActionClickParams<SystemConfigApi.SystemConfig>) {
   }
 }
 
-function onEdit(row: SystemConfigApi.SystemConfig) {
-  formDrawerApi.setData(row).open();
+async function onEdit(row: SystemConfigApi.SystemConfig) {
+  const detail = await getSystemConfigById(row.id);
+  formDrawerApi.setData(detail ?? row).open();
 }
 
 function onDelete(row: SystemConfigApi.SystemConfig) {
