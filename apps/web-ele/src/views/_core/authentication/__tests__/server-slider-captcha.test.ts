@@ -93,6 +93,31 @@ function setSliderMetrics(
   );
 }
 
+function stubResizeObserver() {
+  let callback: ResizeObserverCallback | undefined;
+  let instance: ResizeObserver | undefined;
+  const disconnect = vi.fn();
+  const observe = vi.fn();
+  const unobserve = vi.fn();
+  class ResizeObserverStub {
+    disconnect = disconnect;
+    observe = observe;
+    unobserve = unobserve;
+
+    constructor(nextCallback: ResizeObserverCallback) {
+      callback = nextCallback;
+      instance = this as unknown as ResizeObserver;
+    }
+  }
+  vi.stubGlobal('ResizeObserver', ResizeObserverStub);
+  return {
+    disconnect,
+    invoke: () => callback?.([], instance as ResizeObserver),
+    observe,
+    unobserve,
+  };
+}
+
 async function loadedCaptcha() {
   getChallenge.mockResolvedValueOnce(challenge);
   const wrapper = mountCaptcha();
@@ -112,6 +137,7 @@ describe('server slider captcha', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
   it('loads a challenge and renders the server images without exposing a target x', async () => {
@@ -126,6 +152,63 @@ describe('server slider captcha', () => {
     );
     expect(wrapper.get('[aria-label="滑块拼图验证图片"]')).toBeTruthy();
     expect(wrapper.html()).not.toContain('targetX');
+  });
+
+  it('observes the image area after the asynchronous challenge renders', async () => {
+    const observer = stubResizeObserver();
+    getChallenge.mockResolvedValue(challenge);
+    const wrapper = mountCaptcha();
+    await flushPromises();
+    const image = wrapper.get('[data-test="image-area"]');
+
+    expect(observer.observe).toHaveBeenCalledWith(image.element);
+
+    await (wrapper.vm as unknown as { reset: () => Promise<void> }).reset();
+    expect(observer.unobserve).toHaveBeenCalledWith(image.element);
+    const replacement = wrapper.get('[data-test="image-area"]');
+    expect(observer.observe).toHaveBeenCalledWith(replacement.element);
+
+    wrapper.unmount();
+    expect(observer.unobserve).toHaveBeenCalledWith(replacement.element);
+    expect(observer.disconnect).toHaveBeenCalledOnce();
+  });
+
+  it('remeasures through ResizeObserver before normalizing movement', async () => {
+    const observer = stubResizeObserver();
+    const wrapper = await loadedCaptcha();
+    solveProof.mockResolvedValue(6);
+    verifyCaptcha.mockResolvedValue({ captchaToken: 'token', expiresIn: 120 });
+    const image = wrapper.get('[data-test="image-area"]');
+    vi.spyOn(image.element, 'getBoundingClientRect').mockReturnValue({
+      bottom: 80,
+      height: 80,
+      left: 0,
+      right: 160,
+      top: 0,
+      width: 160,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    setSliderMetrics(wrapper, 160, 18);
+    observer.invoke();
+    let now = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+    const slider = sliderOf(wrapper);
+    slider.vm.$emit('start', { pageY: 0 });
+    now = 300;
+    slider.vm.$emit('move', { event: { pageY: 0 }, moveX: 136 });
+    now = 350;
+    slider.vm.$emit('end', { pageY: 0 });
+    await flushPromises();
+
+    expect(observer.observe).toHaveBeenCalledWith(image.element);
+    expect(lastVerifyParams().finalX).toBe(278);
+    const pieceStyle = (
+      wrapper.get('[data-test="piece"]').element as HTMLElement
+    ).style;
+    expect(pieceStyle.left).toBe('139px');
+    expect(pieceStyle.width).toBe('21px');
   });
 
   it('normalizes movement and sends an interpolated, monotonic track', async () => {
@@ -526,6 +609,104 @@ describe('server slider captcha', () => {
 
     expect(solveProof).toHaveBeenCalledOnce();
     expect(verifyCaptcha).toHaveBeenCalledOnce();
+  });
+
+  it('keeps challenge expiry active and aborts pending proof before verify', async () => {
+    vi.useFakeTimers();
+    getChallenge
+      .mockResolvedValueOnce({ ...challenge, expiresIn: 1 })
+      .mockReturnValueOnce(new Promise(() => {}));
+    const wrapper = mountCaptcha();
+    await flushPromises();
+    let proofSignal: AbortSignal | undefined;
+    solveProof.mockImplementation(
+      (_id, _nonce, _difficulty, _max, signal) =>
+        new Promise((_resolve, reject) => {
+          proofSignal = signal;
+          signal?.addEventListener('abort', () =>
+            reject(new DOMException('Aborted', 'AbortError')),
+          );
+        }),
+    );
+    let now = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+    const slider = sliderOf(wrapper);
+    slider.vm.$emit('start', { pageY: 0 });
+    now = 300;
+    slider.vm.$emit('move', { event: { pageY: 0 }, moveX: 100 });
+    now = 350;
+    slider.vm.$emit('end', { pageY: 0 });
+    await nextTick();
+
+    await vi.advanceTimersByTimeAsync(1000);
+    await flushPromises();
+
+    expect(proofSignal?.aborted).toBe(true);
+    expect(verifyCaptcha).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-test="background"]').exists()).toBe(false);
+    expect(getChallenge).toHaveBeenCalledTimes(2);
+    wrapper.unmount();
+  });
+
+  it('does not verify after the absolute deadline when the timer is delayed', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    getChallenge.mockResolvedValueOnce({ ...challenge, expiresIn: 1 });
+    const wrapper = mountCaptcha();
+    await flushPromises();
+    solveProof.mockResolvedValue(5);
+    verifyCaptcha.mockResolvedValue({ captchaToken: 'late', expiresIn: 120 });
+    let now = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+    const slider = sliderOf(wrapper);
+    slider.vm.$emit('start', { pageY: 0 });
+    now = 300;
+    slider.vm.$emit('move', { event: { pageY: 0 }, moveX: 100 });
+    now = 350;
+    slider.vm.$emit('end', { pageY: 0 });
+    vi.setSystemTime(1500);
+    await flushPromises();
+
+    expect(verifyCaptcha).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-test="background"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('does not publish a verify result that resolves after challenge expiry', async () => {
+    vi.useFakeTimers();
+    getChallenge
+      .mockResolvedValueOnce({ ...challenge, expiresIn: 1 })
+      .mockReturnValueOnce(new Promise(() => {}));
+    const wrapper = mountCaptcha();
+    await flushPromises();
+    solveProof.mockResolvedValue(5);
+    let resolveVerify!: (value: {
+      captchaToken: string;
+      expiresIn: number;
+    }) => void;
+    verifyCaptcha.mockImplementation(
+      () => new Promise((resolve) => (resolveVerify = resolve)),
+    );
+    let now = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+    const slider = sliderOf(wrapper);
+    slider.vm.$emit('start', { pageY: 0 });
+    now = 300;
+    slider.vm.$emit('move', { event: { pageY: 0 }, moveX: 100 });
+    now = 350;
+    slider.vm.$emit('end', { pageY: 0 });
+    await flushPromises();
+    expect(verifyCaptcha).toHaveBeenCalledOnce();
+
+    await vi.advanceTimersByTimeAsync(1000);
+    resolveVerify({ captchaToken: 'expired-token', expiresIn: 120 });
+    await flushPromises();
+
+    expect(wrapper.emitted('update:modelValue') ?? []).not.toContainEqual([
+      'expired-token',
+    ]);
+    expect(wrapper.text()).not.toContain('验证通过');
+    wrapper.unmount();
   });
 
   it('aborts an in-flight proof when unmounted', async () => {

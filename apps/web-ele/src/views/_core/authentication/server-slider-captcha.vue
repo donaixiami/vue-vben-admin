@@ -34,12 +34,15 @@ const track = ref<AuthApi.TrackPoint[]>([]);
 let challengeTimer: ReturnType<typeof setTimeout> | undefined;
 let proofController: AbortController | undefined;
 let resizeObserver: ResizeObserver | undefined;
+let observedImageArea: HTMLDivElement | undefined;
 let startTime = 0;
 let startY = 0;
 let lastX = 0;
 let destroyed = false;
 let dragging = false;
 let challengeRequestId = 0;
+let attemptGeneration = 0;
+let challengeExpiresAt = 0;
 
 const scale = computed(() => {
   const imageWidth = challenge.value?.imageWidth ?? 320;
@@ -77,7 +80,23 @@ function abortProof() {
   proofController = undefined;
 }
 
+function stopObservingImageArea() {
+  if (resizeObserver && observedImageArea) {
+    resizeObserver.unobserve(observedImageArea);
+  }
+  observedImageArea = undefined;
+}
+
+function observeImageArea() {
+  const area = imageArea.value;
+  if (!resizeObserver || !area || observedImageArea === area) return;
+  stopObservingImageArea();
+  resizeObserver.observe(area);
+  observedImageArea = area;
+}
+
 function clearAttempt() {
+  attemptGeneration += 1;
   abortProof();
   modelValue.value = '';
   passed.value = false;
@@ -92,26 +111,37 @@ function clearAttempt() {
 function expireChallenge() {
   clearChallengeTimer();
   clearAttempt();
+  challengeExpiresAt = 0;
+  stopObservingImageArea();
   challenge.value = undefined;
   loading.value = true;
   statusText.value = '正在加载验证图片…';
   slider.value?.resume();
 }
 
-function scheduleExpiry(expiresIn: number) {
+function scheduleExpiry(expiresAt: number) {
   challengeTimer = setTimeout(
     () => {
       expireChallenge();
       void loadChallenge(false);
     },
-    Math.max(0, expiresIn * 1000),
+    Math.max(0, expiresAt - Date.now()),
   );
+}
+
+function rejectExpiredChallenge() {
+  if (challengeExpiresAt <= 0 || Date.now() < challengeExpiresAt) return false;
+  expireChallenge();
+  void loadChallenge(false);
+  return true;
 }
 
 async function loadChallenge(showLoading = true) {
   const requestId = ++challengeRequestId;
   clearChallengeTimer();
   abortProof();
+  stopObservingImageArea();
+  challengeExpiresAt = 0;
   if (showLoading) {
     loading.value = true;
     statusText.value = '正在加载验证图片…';
@@ -119,16 +149,22 @@ async function loadChallenge(showLoading = true) {
   try {
     const result = await getCaptchaChallengeApi();
     if (destroyed || requestId !== challengeRequestId) return false;
+    const expiresAt = Date.now() + result.expiresIn * 1000;
+    challengeExpiresAt = expiresAt;
     challenge.value = result;
     clearAttempt();
     loading.value = false;
     statusText.value = '请拖动滑块完成拼图';
+    scheduleExpiry(expiresAt);
     await nextTick();
+    if (destroyed || requestId !== challengeRequestId) return false;
+    observeImageArea();
     measure();
-    scheduleExpiry(result.expiresIn);
     return true;
   } catch {
     if (destroyed || requestId !== challengeRequestId) return false;
+    stopObservingImageArea();
+    challengeExpiresAt = 0;
     challenge.value = undefined;
     loading.value = false;
     statusText.value = '验证图片加载失败，请重试';
@@ -213,6 +249,7 @@ async function failAttempt() {
 async function finishAttempt(finalY: number) {
   const current = challenge.value;
   if (!current || !dragging || loading.value || passed.value) return;
+  const generation = attemptGeneration;
   dragging = false;
   const realElapsed = elapsedTime();
   appendInterpolatedPoint(lastX, finalY - startY, realElapsed);
@@ -222,7 +259,6 @@ async function finishAttempt(finalY: number) {
     return;
   }
 
-  clearChallengeTimer();
   loading.value = true;
   statusText.value = '正在验证…';
   const controller = new AbortController();
@@ -235,7 +271,14 @@ async function finishAttempt(finalY: number) {
       5_000_000,
       controller.signal,
     );
-    if (controller.signal.aborted || proofController !== controller) return;
+    if (
+      generation !== attemptGeneration ||
+      controller.signal.aborted ||
+      proofController !== controller
+    ) {
+      return;
+    }
+    if (rejectExpiredChallenge()) return;
     const result = await verifyCaptchaApi({
       challengeId: current.challengeId,
       duration,
@@ -246,16 +289,20 @@ async function finishAttempt(finalY: number) {
     });
     if (
       destroyed ||
+      generation !== attemptGeneration ||
       controller.signal.aborted ||
       proofController !== controller
     ) {
       return;
     }
+    if (rejectExpiredChallenge()) return;
     modelValue.value = result.captchaToken;
     passed.value = true;
     loading.value = false;
     statusText.value = '验证通过';
-    scheduleExpiry(result.expiresIn);
+    challengeExpiresAt = 0;
+    clearChallengeTimer();
+    scheduleExpiry(Date.now() + result.expiresIn * 1000);
   } catch (error) {
     if (
       destroyed ||
@@ -310,7 +357,7 @@ onMounted(() => {
   window.addEventListener('resize', measure);
   if (typeof ResizeObserver !== 'undefined') {
     resizeObserver = new ResizeObserver(measure);
-    if (imageArea.value) resizeObserver.observe(imageArea.value);
+    observeImageArea();
   }
 });
 
@@ -318,6 +365,7 @@ onBeforeUnmount(() => {
   destroyed = true;
   clearChallengeTimer();
   abortProof();
+  stopObservingImageArea();
   resizeObserver?.disconnect();
   window.removeEventListener('resize', measure);
 });
