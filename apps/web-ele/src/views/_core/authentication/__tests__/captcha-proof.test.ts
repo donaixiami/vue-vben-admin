@@ -34,7 +34,7 @@ describe('solveCaptchaProof', () => {
         'challenge-1',
         'nonce-1',
         3,
-        5_000_000,
+        250_000,
         controller.signal,
       ),
     ).rejects.toMatchObject({ name: 'AbortError' });
@@ -52,7 +52,7 @@ describe('solveCaptchaProof', () => {
       'challenge-1',
       'nonce-1',
       3,
-      5_000_000,
+      250_000,
       controller.signal,
     );
     controller.abort();
@@ -69,7 +69,7 @@ describe('solveCaptchaProof', () => {
       'challenge-1',
       'nonce-1',
       3,
-      5_000_000,
+      250_000,
       controller.signal,
     );
     controller.abort();
@@ -89,7 +89,7 @@ describe('solveCaptchaProof', () => {
     expect(removeListener).toHaveBeenCalledWith('abort', expect.any(Function));
   });
 
-  it('includes counter 5,000,000 in the search range', async () => {
+  it('includes counter 250,000 in the search range', async () => {
     vi.spyOn(crypto.subtle, 'digest').mockResolvedValue(
       new Uint8Array(32).buffer,
     );
@@ -99,19 +99,18 @@ describe('solveCaptchaProof', () => {
         'challenge-1',
         'nonce-1',
         3,
-        5_000_000,
+        250_000,
         undefined,
-        5_000_000,
+        250_000,
       ),
-    ).resolves.toBe(5_000_000);
+    ).resolves.toBe(250_000);
   });
 
   it.each([
     [2, [0x00, 0xFF]],
     [3, [0x00, 0x0F]],
-    [4, [0x00, 0x00]],
   ])(
-    'checks %i leading hex digits across byte boundaries',
+    'checks %i leading hex digits across nibble boundaries',
     async (difficulty, prefix) => {
       const bytes = new Uint8Array(32).fill(0xFF);
       bytes.set(prefix);
@@ -120,6 +119,23 @@ describe('solveCaptchaProof', () => {
       await expect(
         solveCaptchaProof('challenge-1', 'nonce-1', difficulty, 256),
       ).resolves.toBe(0);
+    },
+  );
+
+  it.each([
+    ['difficulty above protocol', 'challenge-1', 'nonce-1', 4, 10],
+    ['challenge id too long', 'c'.repeat(129), 'nonce-1', 3, 10],
+    ['nonce too long', 'challenge-1', 'n'.repeat(65), 3, 10],
+    ['counter budget too large', 'challenge-1', 'nonce-1', 3, 250_001],
+  ])(
+    'rejects %s before hashing',
+    async (_name, challengeId, nonce, difficulty, maxCounter) => {
+      const digest = vi.spyOn(crypto.subtle, 'digest');
+
+      await expect(
+        solveCaptchaProof(challengeId, nonce, difficulty, maxCounter),
+      ).rejects.toBeInstanceOf(RangeError);
+      expect(digest).not.toHaveBeenCalled();
     },
   );
 });

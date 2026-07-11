@@ -1,4 +1,5 @@
 const BATCH_SIZE = 256;
+const MAX_COUNTER = 250_000;
 const encoder = new TextEncoder();
 
 function abortError() {
@@ -50,13 +51,33 @@ export async function solveCaptchaProof(
   challengeId: string,
   nonce: string,
   difficulty: number,
-  max = 5_000_000,
+  max = MAX_COUNTER,
   signal?: AbortSignal,
   startCounter = 0,
 ): Promise<number> {
   if (signal?.aborted) throw abortError();
-  if (!Number.isInteger(difficulty) || difficulty < 0 || difficulty > 64) {
+  if (
+    typeof challengeId !== 'string' ||
+    challengeId.length > 128 ||
+    !challengeId.trim()
+  ) {
+    throw new RangeError('Invalid captcha challenge id');
+  }
+  if (typeof nonce !== 'string' || nonce.length > 64 || !nonce.trim()) {
+    throw new RangeError('Invalid captcha proof nonce');
+  }
+  if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 3) {
     throw new RangeError('Invalid captcha proof difficulty');
+  }
+  if (!Number.isInteger(max) || max < 0 || max > MAX_COUNTER) {
+    throw new RangeError('Invalid captcha proof counter budget');
+  }
+  if (
+    !Number.isInteger(startCounter) ||
+    startCounter < 0 ||
+    startCounter > max
+  ) {
+    throw new RangeError('Invalid captcha proof start counter');
   }
 
   for (

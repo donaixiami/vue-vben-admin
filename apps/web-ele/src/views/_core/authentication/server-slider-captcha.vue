@@ -44,6 +44,11 @@ let challengeRequestId = 0;
 let attemptGeneration = 0;
 let challengeExpiresAt = 0;
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const PNG_DATA_PATTERN = /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/;
+const MAX_IMAGE_DATA_LENGTH = 1_000_000;
+
 const scale = computed(() => {
   const imageWidth = challenge.value?.imageWidth ?? 320;
   return Math.min(1, displayWidth.value / imageWidth);
@@ -108,7 +113,7 @@ function clearAttempt() {
   dragging = false;
 }
 
-function expireChallenge() {
+function invalidateChallenge() {
   clearChallengeTimer();
   clearAttempt();
   challengeExpiresAt = 0;
@@ -122,8 +127,7 @@ function expireChallenge() {
 function scheduleExpiry(expiresAt: number) {
   challengeTimer = setTimeout(
     () => {
-      expireChallenge();
-      void loadChallenge(false);
+      void loadChallenge();
     },
     Math.max(0, expiresAt - Date.now()),
   );
@@ -131,24 +135,86 @@ function scheduleExpiry(expiresAt: number) {
 
 function rejectExpiredChallenge() {
   if (challengeExpiresAt <= 0 || Date.now() < challengeExpiresAt) return false;
-  expireChallenge();
-  void loadChallenge(false);
+  void loadChallenge();
   return true;
 }
 
-async function loadChallenge(showLoading = true) {
-  const requestId = ++challengeRequestId;
-  clearChallengeTimer();
-  abortProof();
-  stopObservingImageArea();
-  challengeExpiresAt = 0;
-  if (showLoading) {
-    loading.value = true;
-    statusText.value = '正在加载验证图片…';
+function isIntegerInRange(value: number, min: number, max: number) {
+  return (
+    Number.isFinite(value) &&
+    Number.isInteger(value) &&
+    value >= min &&
+    value <= max
+  );
+}
+
+function isShortNonBlank(value: unknown, maxLength: number): value is string {
+  return (
+    typeof value === 'string' && value.length <= maxLength && !!value.trim()
+  );
+}
+
+function readPngSize(value: unknown) {
+  if (
+    typeof value !== 'string' ||
+    value.length > MAX_IMAGE_DATA_LENGTH ||
+    !PNG_DATA_PATTERN.test(value)
+  ) {
+    return;
   }
+  const encoded = value.slice('data:image/png;base64,'.length);
+  if (encoded.length < 32) return;
+  try {
+    const header = atob(encoded.slice(0, 32));
+    if (header.length < 24) return;
+    const bytes = Uint8Array.from(
+      header,
+      (character) => character.codePointAt(0) ?? 0,
+    );
+    const signature = [137, 80, 78, 71, 13, 10, 26, 10];
+    if (signature.some((byte, index) => bytes[index] !== byte)) return;
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    if (view.getUint32(8) !== 13 || header.slice(12, 16) !== 'IHDR') return;
+    return { height: view.getUint32(20), width: view.getUint32(16) };
+  } catch {}
+}
+
+function validateChallenge(result: AuthApi.CaptchaChallengeResult) {
+  const backgroundSize = readPngSize(result?.backgroundImage);
+  const pieceSize = readPngSize(result?.pieceImage);
+  if (
+    !result ||
+    typeof result.challengeId !== 'string' ||
+    !UUID_PATTERN.test(result.challengeId) ||
+    !isIntegerInRange(result.expiresIn, 10, 300) ||
+    result.proofDifficulty !== 3 ||
+    !isShortNonBlank(result.proofNonce, 64) ||
+    !isIntegerInRange(result.imageWidth, 1, 320) ||
+    !isIntegerInRange(result.imageHeight, 1, 160) ||
+    !isIntegerInRange(result.pieceWidth, 1, Math.min(42, result.imageWidth)) ||
+    !isIntegerInRange(
+      result.pieceY,
+      0,
+      result.imageHeight - result.pieceWidth,
+    ) ||
+    !isIntegerInRange(result.movementWidth, 1, result.imageWidth) ||
+    result.movementWidth !== result.imageWidth - result.pieceWidth ||
+    backgroundSize?.width !== result.imageWidth ||
+    backgroundSize.height !== result.imageHeight ||
+    pieceSize?.width !== result.pieceWidth ||
+    pieceSize.height !== result.pieceWidth
+  ) {
+    throw new Error('Invalid captcha challenge');
+  }
+}
+
+async function loadChallenge() {
+  const requestId = ++challengeRequestId;
+  invalidateChallenge();
   try {
     const result = await getCaptchaChallengeApi();
     if (destroyed || requestId !== challengeRequestId) return false;
+    validateChallenge(result);
     const expiresAt = Date.now() + result.expiresIn * 1000;
     challengeExpiresAt = expiresAt;
     challenge.value = result;
@@ -238,11 +304,8 @@ function handleMove({ event, moveX }: SliderMoveData) {
 }
 
 async function failAttempt() {
-  clearAttempt();
-  loading.value = false;
-  statusText.value = '验证失败，请重试';
   slider.value?.resume();
-  const loaded = await loadChallenge(false);
+  const loaded = await loadChallenge();
   if (!destroyed && loaded) statusText.value = '验证失败，请重试';
 }
 
@@ -268,7 +331,7 @@ async function finishAttempt(finalY: number) {
       current.challengeId,
       current.proofNonce,
       current.proofDifficulty,
-      5_000_000,
+      250_000,
       controller.signal,
     );
     if (
@@ -344,10 +407,14 @@ function handleKeyboard(event: KeyboardEvent) {
 }
 
 async function reset() {
-  clearChallengeTimer();
-  clearAttempt();
   slider.value?.resume();
   await loadChallenge();
+}
+
+function handleTouchCancel() {
+  if (!dragging && !proofController) return;
+  slider.value?.resume();
+  void loadChallenge();
 }
 
 defineExpose({ reset });
@@ -372,7 +439,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="w-full max-w-[320px] overflow-hidden">
+  <div
+    class="w-full max-w-[320px] overflow-hidden"
+    @touchcancel.capture="handleTouchCancel"
+  >
     <div
       v-if="challenge"
       ref="imageArea"
@@ -382,7 +452,7 @@ onBeforeUnmount(() => {
       aria-valuemin="0"
       :aria-valuenow="Math.round(pieceX)"
       :aria-valuetext="statusText"
-      class="relative w-full max-w-[320px] overflow-hidden rounded-md"
+      class="relative w-full max-w-[320px] touch-none overflow-hidden rounded-md"
       data-test="image-area"
       role="slider"
       tabindex="0"
@@ -415,7 +485,7 @@ onBeforeUnmount(() => {
       <SliderCaptcha
         ref="slider"
         :action-style="sliderActionStyle"
-        class="mt-3"
+        class="mt-3 touch-none"
         is-slot
         :model-value="passed"
         success-text="验证通过"
