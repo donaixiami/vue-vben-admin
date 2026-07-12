@@ -183,6 +183,10 @@ async function updateMenu(
   return requestClient.put(`/system/menu/${id}`, data);
 }
 
+async function updateMenuOrder(id: string, order: number) {
+  return requestClient.put(`/system/menu/${id}/order`, { order });
+}
+
 /**
  * 删除菜单
  * @param id 菜单 ID
@@ -200,4 +204,5 @@ export {
   isMenuNameExists,
   isMenuPathExists,
   updateMenu,
+  updateMenuOrder,
 };

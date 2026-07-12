@@ -1,5 +1,9 @@
 <script lang="ts" setup>
-import type { OnActionClickParams, VxeTableGridOptions } from '#/adapter/vxe-table';
+import type {
+  OnActionClickParams,
+  VxeTableGridOptions,
+} from '#/adapter/vxe-table';
+import type { SystemMenuApi } from '#/api/system/menu';
 
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { IconifyIcon, Plus } from '@vben/icons';
@@ -10,10 +14,19 @@ import { MenuBadge } from '@vben-core/menu-ui';
 import { ElButton, ElMessage } from 'element-plus';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { deleteMenu, getMenuList, SystemMenuApi } from '#/api/system/menu';
+import { deleteMenu, getMenuList, updateMenuOrder } from '#/api/system/menu';
 
-import { useColumns } from './data';
+import { enqueueMenuOrderSave, useColumns } from './data';
 import Form from './modules/form.vue';
+import { normalizeMenuOrder, persistMenuOrder } from './modules/menu-order';
+
+interface MenuEditEvent {
+  column: { field?: string };
+  row: SystemMenuApi.SystemMenu;
+}
+
+const previousMenuOrders = new Map<string, unknown>();
+const menuOrderSavePromises = new Map<string, Promise<void>>();
 
 const [FormDrawer, formDrawerApi] = useVbenDrawer({
   connectedComponent: Form,
@@ -23,6 +36,10 @@ const [FormDrawer, formDrawerApi] = useVbenDrawer({
 const [Grid, gridApi] = useVbenVxeGrid({
   gridOptions: {
     columns: useColumns(onActionClick),
+    editConfig: {
+      mode: 'cell',
+      trigger: 'click',
+    },
     height: 'auto',
     keepSource: true,
     pagerConfig: {
@@ -55,7 +72,46 @@ const [Grid, gridApi] = useVbenVxeGrid({
   } as VxeTableGridOptions,
 });
 
-function onActionClick({ code, row }: OnActionClickParams<SystemMenuApi.SystemMenu>) {
+function onEditActivated({ column, row }: MenuEditEvent) {
+  if (column.field === 'meta.order') {
+    previousMenuOrders.set(row.id, row.meta?.order);
+  }
+}
+
+async function onEditClosed({ column, row }: MenuEditEvent) {
+  if (column.field !== 'meta.order' || !previousMenuOrders.has(row.id)) {
+    return;
+  }
+
+  const previousOrder = previousMenuOrders.get(row.id);
+  previousMenuOrders.delete(row.id);
+  const submittedOrder = normalizeMenuOrder(row.meta?.order);
+
+  const nextSave = enqueueMenuOrderSave(menuOrderSavePromises, row.id, () =>
+    persistMenuOrder({
+      previousOrder,
+      refresh: () => gridApi.query(),
+      row,
+      submittedOrder,
+      update: updateMenuOrder,
+    }).then(() => undefined),
+  );
+
+  try {
+    await nextSave;
+  } catch {
+    ElMessage.error('菜单排序更新失败');
+  } finally {
+    if (menuOrderSavePromises.get(row.id) === nextSave) {
+      menuOrderSavePromises.delete(row.id);
+    }
+  }
+}
+
+function onActionClick({
+  code,
+  row,
+}: OnActionClickParams<SystemMenuApi.SystemMenu>) {
   switch (code) {
     case 'append': {
       onAppend(row);
@@ -108,7 +164,7 @@ function onDelete(row: SystemMenuApi.SystemMenu) {
 <template>
   <Page auto-content-height>
     <FormDrawer @success="onRefresh" />
-    <Grid>
+    <Grid @edit-activated="onEditActivated" @edit-closed="onEditClosed">
       <template #toolbar-tools>
         <ElButton type="primary" @click="onCreate">
           <Plus class="size-5" />
@@ -118,7 +174,11 @@ function onDelete(row: SystemMenuApi.SystemMenu) {
       <template #title="{ row }">
         <div class="flex w-full items-center gap-1">
           <div class="size-5 flex-shrink-0">
-            <IconifyIcon v-if="row.type === 'button'" icon="carbon:security" class="size-full" />
+            <IconifyIcon
+              v-if="row.type === 'button'"
+              icon="carbon:security"
+              class="size-full"
+            />
             <IconifyIcon
               v-else-if="row.meta?.icon"
               :icon="row.meta?.icon || 'carbon:circle-dash'"

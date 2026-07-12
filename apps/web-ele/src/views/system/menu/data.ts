@@ -3,6 +3,21 @@ import type { SystemMenuApi } from '#/api/system/menu';
 
 import { $t } from '#/locales';
 
+import { normalizeMenuOrder } from './modules/menu-order';
+
+export function enqueueMenuOrderSave(
+  savePromises: Map<string, Promise<void>>,
+  rowId: string,
+  operation: () => Promise<void>,
+): Promise<void> {
+  const activeSave = savePromises.get(rowId);
+  const nextSave = (activeSave ?? Promise.resolve())
+    .catch(() => undefined)
+    .then(operation);
+  savePromises.set(rowId, nextSave);
+  return nextSave;
+}
+
 export function getMenuTypeOptions() {
   return [
     {
@@ -73,6 +88,20 @@ export function useColumns(
       },
       minWidth: 200,
       title: $t('system.menu.component'),
+    },
+    {
+      align: 'center',
+      editRender: {
+        attrs: {
+          class: 'vxe-default-input w-full px-2',
+          type: 'number',
+        },
+        name: 'input',
+      },
+      field: 'meta.order',
+      formatter: ({ row }) => normalizeMenuOrder(row.meta?.order),
+      title: '排序',
+      width: 100,
     },
     {
       cellRender: { name: 'CellTag' },
