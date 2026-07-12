@@ -497,3 +497,12 @@ When starting a new session:
 - Added chat multi-device sync handling to the temporary real-time chat test page. The backend now emits `messageSync` to every member's `user_{userId}` personal room, including the sender, and emits `readSync` for same-account read-state synchronization.
 - Added `apps/web-ele/src/views/_core/chat/modules/message-sync.ts` with message-key normalization and a seen-message tracker. The chat page consumes both `receiveMessage` and `messageSync`, deduplicating by server `id` first and `clientMsgId/client_msg_id` second so a device can safely receive both session-room and personal-room events.
 - History loading now resets and repopulates the seen-message tracker, which prevents reconnect/history refresh from duplicating messages already rendered from realtime events.
+
+### 2026-07-12 定时任务模块
+
+- 新增 `apps/web-ele/src/api/monitor/job.ts` 和 `apps/web-ele/src/views/monitor/job`，后端动态菜单组件路径为 `/monitor/job/list`。
+- 页面采用若依式任务管理模型：任务分组、白名单调用目标、六段式 Cron、未来五次预览、四种错过策略、并发策略、超时、重试、启停、立即执行和调度日志。
+- 调用目标及其参数表单完全由 `/monitor/job/handlers` 元数据驱动，前端不写死可执行接口或函数。
+- 表格在容器内处理横向滚动；浏览器验证 1280px 与 375px 视口均无 body 横向溢出。
+- 旧版后端菜单 `/system/scheduled-task/list` 和 `/system/scheduled-task/log` 不存在对应页面，必须通过后端 `sql/scheduled-task-menu.sql` 迁移并禁用，否则动态路由会在控制台报组件无效。
+- 当前验证基线：3 个测试文件 / 5 项测试、`@vben/web-ele` typecheck、相关 ESLint、列表/新增抽屉加载和运行接口闭环通过。

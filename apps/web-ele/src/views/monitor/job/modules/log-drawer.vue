@@ -136,9 +136,9 @@ const [Drawer, drawerApi] = useVbenDrawer({
               type="danger"
               :disabled="row.status === 'running'"
               @click="remove(row)"
-              >
-删除
-</ElButton>
+            >
+              删除
+            </ElButton>
           </template>
         </ElTableColumn>
       </ElTable>
