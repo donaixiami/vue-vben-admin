@@ -423,6 +423,12 @@ When starting a new session:
 
 ## Session Log
 
+### 2026-07-12
+
+- 登录拼图验证码改为复用公共 `SliderTranslateCaptcha` 的服务端模式。公共组件只接收 `puzzle` 图片与几何数据并输出拖动证据，不包含 API、PoW、challengeId、token 或登录业务；释放滑块后会在内部锁存当前位置，后端验证失败或刷新时才复位，验证成功则继续保持。
+- 服务端模式的 `puzzle` 字段为 `backgroundImage`、`pieceImage`、`imageWidth`、`imageHeight`、`pieceWidth`、`pieceHeight`、`pieceY`、`movementWidth`；当前后端几何为 `320×160` 背景、`65×65` 拼图片、`movementWidth=255`。
+- `apps/web-ele` 的 `ServerSliderCaptcha` 负责 challenge/PNG 校验、绝对 TTL、PoW、竞态取消、verify、一次性 `captchaToken` 和刷新；登录请求只发送 `username`、`password`、`captchaToken`。
+
 ### 2026-06-19
 
 - Created this recovery document after reading the monorepo structure, `web-ele` startup chain, env/Vite setup, request client, route guard, backend access generation, mock backend, API modules, adapter layers, and current local diff.

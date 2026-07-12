@@ -160,6 +160,20 @@ export interface SliderRotateCaptchaProps {
 
 export interface SliderTranslateCaptchaProps {
   /**
+   * @description Whether interactions are disabled.
+   * @default false
+   */
+  disabled?: boolean;
+  /**
+   * @description Captcha rendering mode.
+   * @default 'client'
+   */
+  mode?: 'client' | 'server';
+  /**
+   * @description Server-generated puzzle images and source geometry.
+   */
+  puzzle?: SliderTranslateCaptchaPuzzle;
+  /**
    * @description 拼图的宽度
    * @default 420
    */
@@ -207,4 +221,28 @@ export interface SliderRotateVerifyPassingData {
   event: MouseEvent | TouchEvent;
   moveDistance: number;
   moveX: number;
+}
+
+export interface SliderTranslateCaptchaPuzzle {
+  backgroundImage: string;
+  imageHeight: number;
+  imageWidth: number;
+  movementWidth: number;
+  pieceHeight: number;
+  pieceImage: string;
+  pieceWidth: number;
+  pieceY: number;
+}
+
+export interface SliderTranslateCaptchaDragEndData {
+  duration: number;
+  finalX: number;
+  track: CaptchaData[];
+  width: number;
+}
+
+export interface SliderTranslateCaptchaActionType {
+  refresh: () => void;
+  reset: () => void;
+  resume: () => void;
 }

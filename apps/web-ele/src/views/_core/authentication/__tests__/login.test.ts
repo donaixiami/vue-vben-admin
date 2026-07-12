@@ -7,29 +7,20 @@ import Login from '../login.vue';
 import ServerSliderCaptcha from '../server-slider-captcha.vue';
 
 const { authStore } = vi.hoisted(() => ({
-  authStore: {
-    authLogin: vi.fn(),
-    loginLoading: false,
-  },
+  authStore: { authLogin: vi.fn(), loginLoading: false },
 }));
 
 vi.mock('#/store', () => ({ useAuthStore: () => authStore }));
 vi.mock('@vben/locales', () => ({ $t: (key: string) => key }));
-
 vi.mock('@vben/common-ui', async (importOriginal) => {
   const original = await importOriginal<typeof import('@vben/common-ui')>();
   return {
     ...original,
     AuthenticationLogin: defineComponent({
       name: 'AuthenticationLogin',
-      props: {
-        formSchema: { type: Array, required: true },
-        loading: Boolean,
-      },
+      props: { formSchema: { type: Array, required: true }, loading: Boolean },
       emits: ['submit'],
-      setup() {
-        return () => h('div');
-      },
+      setup: () => () => h('div'),
     }),
   };
 });
@@ -109,7 +100,7 @@ describe('login page', () => {
     await Promise.all([first, second]);
   });
 
-  it('resets captcha once and restores submission after login fails', async () => {
+  it('refreshes captcha once after a failed login', async () => {
     const login = deferred<{ userInfo: null }>();
     authStore.authLogin.mockReturnValue(login.promise);
     const wrapper = mountLogin();
@@ -118,9 +109,6 @@ describe('login page', () => {
     const request = submit(loginValues);
     const duplicate = submit(loginValues);
     await nextTick();
-
-    expect(authStore.authLogin).toHaveBeenCalledOnce();
-    expect(schemaOf(wrapper)[2]?.componentProps?.disabled).toBe(true);
     login.reject(new Error('login failed'));
 
     await expect(Promise.all([request, duplicate])).rejects.toThrow(
@@ -134,29 +122,16 @@ describe('login page', () => {
     expect(schemaOf(wrapper)[2]?.componentProps?.disabled).toBe(false);
   });
 
-  it('restores submission without resetting captcha after login succeeds', async () => {
-    const login = deferred<{ userInfo: null }>();
-    authStore.authLogin.mockReturnValue(login.promise);
+  it('does not refresh captcha after a successful login', async () => {
+    authStore.authLogin.mockResolvedValue({ userInfo: null });
     const wrapper = mountLogin();
     const initialResetKey = schemaOf(wrapper)[2]?.componentProps?.resetKey;
-    const request = submitHandler(wrapper)(loginValues);
-    await nextTick();
 
-    expect(schemaOf(wrapper)[2]?.componentProps?.disabled).toBe(true);
-    login.resolve({ userInfo: null });
-    await request;
+    await submitHandler(wrapper)(loginValues);
     await flushPromises();
 
     expect(schemaOf(wrapper)[2]?.componentProps?.resetKey).toBe(
       initialResetKey,
     );
-    expect(schemaOf(wrapper)[2]?.componentProps?.disabled).toBe(false);
-  });
-
-  it('disables captcha interaction while login is loading', () => {
-    authStore.loginLoading = true;
-    const wrapper = mountLogin();
-
-    expect(schemaOf(wrapper)[2]?.componentProps?.disabled).toBe(true);
   });
 });

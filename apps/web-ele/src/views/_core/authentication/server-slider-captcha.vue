@@ -1,166 +1,85 @@
 <script setup lang="ts">
+import type {
+  SliderTranslateCaptchaActionType,
+  SliderTranslateCaptchaDragEndData,
+} from '@vben/common-ui';
+
 import type { AuthApi } from '#/api/core/auth';
 
-import {
-  computed,
-  nextTick,
-  onBeforeUnmount,
-  onMounted,
-  ref,
-  watch,
-} from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
-import { SliderCaptcha } from '@vben/common-ui';
+import { SliderTranslateCaptcha } from '@vben/common-ui';
 
 import { getCaptchaChallengeApi, verifyCaptchaApi } from '#/api/core/auth';
 
 import { solveCaptchaProof } from './captcha-proof';
 
-interface SliderMoveData {
-  event: MouseEvent | TouchEvent;
-  moveX: number;
-}
-
-interface SliderCaptchaExposed {
-  resume: () => void;
-}
-
 const props = withDefaults(
-  defineProps<{
-    disabled?: boolean;
-    resetKey?: number;
-  }>(),
-  {
-    disabled: false,
-    resetKey: 0,
-  },
+  defineProps<{ disabled?: boolean; resetKey?: number }>(),
+  { disabled: false, resetKey: 0 },
 );
 
 const modelValue = defineModel<string>({ default: '' });
-
 const challenge = ref<AuthApi.CaptchaChallengeResult>();
-const imageArea = ref<HTMLDivElement>();
-const slider = ref<SliderCaptchaExposed>();
-const sliderArea = ref<HTMLDivElement>();
-const displayWidth = ref(320);
-const pieceX = ref(0);
+const slider = ref<SliderTranslateCaptchaActionType>();
 const loading = ref(true);
+const loadFailed = ref(false);
+const verifying = ref(false);
 const passed = ref(false);
 const statusText = ref('正在加载验证图片…');
-const track = ref<AuthApi.TrackPoint[]>([]);
-
-let challengeTimer: ReturnType<typeof setTimeout> | undefined;
-let proofController: AbortController | undefined;
-let resizeObserver: ResizeObserver | undefined;
-let observedImageArea: HTMLDivElement | undefined;
-let startTime = 0;
-let startY = 0;
-let lastX = 0;
-let destroyed = false;
-let dragging = false;
-let challengeRequestId = 0;
-let attemptGeneration = 0;
-let challengeExpiresAt = 0;
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PNG_DATA_PATTERN = /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/;
 const MAX_IMAGE_DATA_LENGTH = 1_000_000;
-
-const scale = computed(() => {
-  const imageWidth = challenge.value?.imageWidth ?? 320;
-  return Math.min(1, displayWidth.value / imageWidth);
-});
-const imageHeight = computed(
-  () => (challenge.value?.imageHeight ?? 160) * scale.value,
+const disabled = computed(
+  () => props.disabled || loading.value || verifying.value || passed.value,
 );
-const pieceSize = computed(
-  () => (challenge.value?.pieceWidth ?? 42) * scale.value,
-);
-const pieceTop = computed(() => (challenge.value?.pieceY ?? 0) * scale.value);
-const pieceLeft = computed(() => pieceX.value * scale.value);
-const sliderActionStyle = computed(() => ({
-  width: `${Math.max(18, pieceSize.value - 6)}px`,
-}));
 
-function eventPageY(event: MouseEvent | TouchEvent) {
-  if ('pageY' in event) return event.pageY;
-  return event.touches[0]?.pageY ?? event.changedTouches[0]?.pageY ?? startY;
-}
+let destroyed = false;
+let challengeController: AbortController | undefined;
+let attemptController: AbortController | undefined;
+let expiryTimer: ReturnType<typeof setTimeout> | undefined;
+let challengeExpiresAt = 0;
+let generation = 0;
 
-function measure() {
-  const width = imageArea.value?.getBoundingClientRect().width ?? 0;
-  displayWidth.value = width > 0 ? Math.min(width, 320) : 320;
-}
-
-function clearChallengeTimer() {
-  if (challengeTimer) clearTimeout(challengeTimer);
-  challengeTimer = undefined;
-}
-
-function abortProof() {
-  proofController?.abort();
-  proofController = undefined;
-}
-
-function stopObservingImageArea() {
-  if (resizeObserver && observedImageArea) {
-    resizeObserver.unobserve(observedImageArea);
-  }
-  observedImageArea = undefined;
-}
-
-function observeImageArea() {
-  const area = imageArea.value;
-  if (!resizeObserver || !area || observedImageArea === area) return;
-  stopObservingImageArea();
-  resizeObserver.observe(area);
-  observedImageArea = area;
-}
-
-function clearAttempt() {
-  attemptGeneration += 1;
-  abortProof();
-  modelValue.value = '';
-  passed.value = false;
-  pieceX.value = 0;
-  track.value = [];
-  lastX = 0;
-  startTime = 0;
-  startY = 0;
-  dragging = false;
-}
-
-function invalidateChallenge() {
-  clearChallengeTimer();
-  clearAttempt();
-  challengeExpiresAt = 0;
-  stopObservingImageArea();
-  challenge.value = undefined;
-  loading.value = true;
-  statusText.value = '正在加载验证图片…';
-  slider.value?.resume();
-}
-
-function scheduleExpiry(expiresAt: number) {
-  challengeTimer = setTimeout(
-    () => {
-      void loadChallenge();
-    },
-    Math.max(0, expiresAt - Date.now()),
+function abortError(error: unknown, controller?: AbortController) {
+  return (
+    controller?.signal.aborted ||
+    (error instanceof DOMException && error.name === 'AbortError')
   );
 }
 
-function rejectExpiredChallenge() {
-  if (challengeExpiresAt <= 0 || Date.now() < challengeExpiresAt) return false;
-  void loadChallenge();
-  return true;
+function clearExpiryTimer() {
+  if (expiryTimer) clearTimeout(expiryTimer);
+  expiryTimer = undefined;
+}
+
+function abortAttempt() {
+  attemptController?.abort();
+  attemptController = undefined;
+  verifying.value = false;
+}
+
+function invalidate() {
+  generation += 1;
+  challengeController?.abort();
+  challengeController = undefined;
+  abortAttempt();
+  clearExpiryTimer();
+  challengeExpiresAt = 0;
+  challenge.value = undefined;
+  modelValue.value = '';
+  passed.value = false;
+  loading.value = true;
+  loadFailed.value = false;
+  statusText.value = '正在加载验证图片…';
 }
 
 function isIntegerInRange(value: number, min: number, max: number) {
   return (
-    Number.isFinite(value) &&
     Number.isInteger(value) &&
+    Number.isFinite(value) &&
     value >= min &&
     value <= max
   );
@@ -168,7 +87,7 @@ function isIntegerInRange(value: number, min: number, max: number) {
 
 function isShortNonBlank(value: unknown, maxLength: number): value is string {
   return (
-    typeof value === 'string' && value.length <= maxLength && !!value.trim()
+    typeof value === 'string' && !!value.trim() && value.length <= maxLength
   );
 }
 
@@ -189,8 +108,13 @@ function readPngSize(value: unknown) {
       header,
       (character) => character.codePointAt(0) ?? 0,
     );
-    const signature = [137, 80, 78, 71, 13, 10, 26, 10];
-    if (signature.some((byte, index) => bytes[index] !== byte)) return;
+    if (
+      [137, 80, 78, 71, 13, 10, 26, 10].some(
+        (byte, index) => bytes[index] !== byte,
+      )
+    ) {
+      return;
+    }
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     if (view.getUint32(8) !== 13 || header.slice(12, 16) !== 'IHDR') return;
     return { height: view.getUint32(20), width: view.getUint32(16) };
@@ -198,154 +122,122 @@ function readPngSize(value: unknown) {
 }
 
 function validateChallenge(result: AuthApi.CaptchaChallengeResult) {
-  const backgroundSize = readPngSize(result?.backgroundImage);
-  const pieceSize = readPngSize(result?.pieceImage);
+  const puzzle = result?.puzzle;
+  const backgroundSize = readPngSize(puzzle?.backgroundImage);
+  const pieceSize = readPngSize(puzzle?.pieceImage);
   if (
     !result ||
-    typeof result.challengeId !== 'string' ||
     !UUID_PATTERN.test(result.challengeId) ||
     !isIntegerInRange(result.expiresIn, 10, 300) ||
-    result.proofDifficulty !== 3 ||
+    !isIntegerInRange(result.proofDifficulty, 1, 3) ||
     !isShortNonBlank(result.proofNonce, 64) ||
-    !isIntegerInRange(result.imageWidth, 1, 320) ||
-    !isIntegerInRange(result.imageHeight, 1, 160) ||
-    !isIntegerInRange(result.pieceWidth, 1, Math.min(42, result.imageWidth)) ||
+    !puzzle ||
+    !isIntegerInRange(puzzle.imageWidth, 1, 320) ||
+    !isIntegerInRange(puzzle.imageHeight, 1, 160) ||
+    !isIntegerInRange(puzzle.pieceWidth, 1, puzzle.imageWidth) ||
+    !isIntegerInRange(puzzle.pieceHeight, 1, puzzle.imageHeight) ||
     !isIntegerInRange(
-      result.pieceY,
+      puzzle.pieceY,
       0,
-      result.imageHeight - result.pieceWidth,
+      puzzle.imageHeight - puzzle.pieceHeight,
     ) ||
-    !isIntegerInRange(result.movementWidth, 1, result.imageWidth) ||
-    result.movementWidth !== result.imageWidth - result.pieceWidth ||
-    backgroundSize?.width !== result.imageWidth ||
-    backgroundSize.height !== result.imageHeight ||
-    pieceSize?.width !== result.pieceWidth ||
-    pieceSize.height !== result.pieceWidth
+    !isIntegerInRange(puzzle.movementWidth, 1, puzzle.imageWidth) ||
+    puzzle.movementWidth !== puzzle.imageWidth - puzzle.pieceWidth ||
+    backgroundSize?.width !== puzzle.imageWidth ||
+    backgroundSize.height !== puzzle.imageHeight ||
+    pieceSize?.width !== puzzle.pieceWidth ||
+    pieceSize.height !== puzzle.pieceHeight
   ) {
     throw new Error('Invalid captcha challenge');
   }
 }
 
+function scheduleReload(expiresAt: number) {
+  clearExpiryTimer();
+  expiryTimer = setTimeout(
+    () => void loadChallenge(),
+    Math.max(0, expiresAt - Date.now()),
+  );
+}
+
+function expired() {
+  return challengeExpiresAt <= 0 || Date.now() >= challengeExpiresAt;
+}
+
+function validDragData(
+  data: SliderTranslateCaptchaDragEndData,
+  current: AuthApi.CaptchaChallengeResult,
+) {
+  return (
+    isIntegerInRange(data.duration, 250, 10_000) &&
+    isIntegerInRange(data.finalX, 0, current.puzzle.movementWidth) &&
+    data.width === current.puzzle.movementWidth &&
+    Array.isArray(data.track) &&
+    data.track.length >= 8
+  );
+}
+
 async function loadChallenge() {
-  const requestId = ++challengeRequestId;
-  invalidateChallenge();
+  invalidate();
+  const currentGeneration = generation;
+  const controller = new AbortController();
+  challengeController = controller;
   try {
-    const result = await getCaptchaChallengeApi();
-    if (destroyed || requestId !== challengeRequestId) return false;
+    const result = await getCaptchaChallengeApi(controller.signal);
+    if (
+      destroyed ||
+      currentGeneration !== generation ||
+      controller.signal.aborted
+    ) {
+      return false;
+    }
     validateChallenge(result);
-    const expiresAt = Date.now() + result.expiresIn * 1000;
-    challengeExpiresAt = expiresAt;
     challenge.value = result;
-    clearAttempt();
+    challengeExpiresAt = Date.now() + result.expiresIn * 1000;
     loading.value = false;
+    loadFailed.value = false;
     statusText.value = '请拖动滑块完成拼图';
-    scheduleExpiry(expiresAt);
-    await nextTick();
-    if (destroyed || requestId !== challengeRequestId) return false;
-    observeImageArea();
-    measure();
+    scheduleReload(challengeExpiresAt);
     return true;
-  } catch {
-    if (destroyed || requestId !== challengeRequestId) return false;
-    stopObservingImageArea();
-    challengeExpiresAt = 0;
-    challenge.value = undefined;
+  } catch (error) {
+    if (
+      destroyed ||
+      currentGeneration !== generation ||
+      abortError(error, controller)
+    ) {
+      return false;
+    }
     loading.value = false;
+    loadFailed.value = true;
     statusText.value = '验证图片加载失败，请重试';
     return false;
+  } finally {
+    if (challengeController === controller) challengeController = undefined;
   }
-}
-
-function elapsedTime() {
-  return Math.max(0, Math.round(performance.now() - startTime));
-}
-
-function appendPoint(x: number, y: number, elapsed: number) {
-  const points = track.value;
-  const t = Math.max(0, Math.round(elapsed));
-  points.push({ t, x: Math.round(x), y: Math.round(y) });
-}
-
-function appendInterpolatedPoint(x: number, y: number, elapsed: number) {
-  const previous = track.value.at(-1);
-  if (!previous) {
-    appendPoint(x, y, elapsed);
-    return;
-  }
-  const targetT = Math.max(previous.t, Math.round(elapsed));
-  const timeSteps = Math.ceil((targetT - previous.t) / 40);
-  const distanceSteps = Math.ceil(Math.abs(x - previous.x) / 20);
-  const steps = Math.max(1, timeSteps, distanceSteps);
-  for (let step = 1; step <= steps; step += 1) {
-    const ratio = step / steps;
-    appendPoint(
-      previous.x + (x - previous.x) * ratio,
-      previous.y + (y - previous.y) * ratio,
-      Math.round(previous.t + (targetT - previous.t) * ratio),
-    );
-  }
-}
-
-function beginAttempt(y: number) {
-  if (props.disabled || !challenge.value || loading.value || passed.value)
-    return;
-  clearAttempt();
-  statusText.value = '请拖动滑块完成拼图';
-  startTime = performance.now();
-  startY = y;
-  dragging = true;
-  appendPoint(0, 0, 0);
-}
-
-function handleStart(event: MouseEvent | TouchEvent) {
-  beginAttempt(eventPageY(event));
-}
-
-function handleMove({ event, moveX }: SliderMoveData) {
-  const current = challenge.value;
-  if (props.disabled || !current || !dragging) return;
-  const action = sliderArea.value?.querySelector<HTMLElement>(
-    '[name="captcha-action"]',
-  );
-  const wrapperWidth =
-    sliderArea.value?.getBoundingClientRect().width || displayWidth.value;
-  const actionWidth = action?.offsetWidth || Math.max(18, pieceSize.value - 6);
-  const actualMovementWidth = Math.max(1, wrapperWidth - actionWidth - 6);
-  lastX = Math.max(
-    0,
-    Math.min(
-      current.movementWidth,
-      (moveX / actualMovementWidth) * current.movementWidth,
-    ),
-  );
-  pieceX.value = lastX;
-  appendInterpolatedPoint(lastX, eventPageY(event) - startY, elapsedTime());
 }
 
 async function failAttempt() {
-  slider.value?.resume();
   const loaded = await loadChallenge();
   if (!destroyed && loaded) statusText.value = '验证失败，请重试';
 }
 
-async function finishAttempt(finalY: number) {
+async function handleDragEnd(data: SliderTranslateCaptchaDragEndData) {
   const current = challenge.value;
-  if (props.disabled || !current || !dragging || loading.value || passed.value)
+  if (!current || disabled.value) return;
+  if (expired()) {
+    await loadChallenge();
     return;
-  const generation = attemptGeneration;
-  dragging = false;
-  const realElapsed = elapsedTime();
-  appendInterpolatedPoint(lastX, finalY - startY, realElapsed);
-  const duration = realElapsed;
-  if (duration < 250) {
+  }
+  if (!validDragData(data, current)) {
     await failAttempt();
     return;
   }
 
-  loading.value = true;
-  statusText.value = '正在验证…';
+  const currentGeneration = generation;
   const controller = new AbortController();
-  proofController = controller;
+  attemptController = controller;
+  verifying.value = true;
+  statusText.value = '正在验证…';
   try {
     const proofCounter = await solveCaptchaProof(
       current.challengeId,
@@ -355,177 +247,100 @@ async function finishAttempt(finalY: number) {
       controller.signal,
     );
     if (
-      generation !== attemptGeneration ||
+      destroyed ||
+      currentGeneration !== generation ||
       controller.signal.aborted ||
-      proofController !== controller
+      expired()
     ) {
+      if (expired() && currentGeneration === generation) void loadChallenge();
       return;
     }
-    if (rejectExpiredChallenge()) return;
-    const result = await verifyCaptchaApi({
-      challengeId: current.challengeId,
-      duration,
-      finalX: Math.round(lastX),
-      proofCounter,
-      track: track.value.map((point) => ({ ...point })),
-      width: current.movementWidth,
-    });
+    const result = await verifyCaptchaApi(
+      {
+        challengeId: current.challengeId,
+        proofCounter,
+        ...data,
+      },
+      controller.signal,
+    );
     if (
       destroyed ||
-      generation !== attemptGeneration ||
+      currentGeneration !== generation ||
       controller.signal.aborted ||
-      proofController !== controller
+      expired()
     ) {
+      if (expired() && currentGeneration === generation) void loadChallenge();
       return;
     }
-    if (rejectExpiredChallenge()) return;
+    if (
+      !isShortNonBlank(result.captchaToken, 2048) ||
+      !isIntegerInRange(result.expiresIn, 10, 300)
+    ) {
+      throw new Error('Invalid captcha verification result');
+    }
     modelValue.value = result.captchaToken;
     passed.value = true;
-    loading.value = false;
+    verifying.value = false;
     statusText.value = '验证通过';
-    challengeExpiresAt = 0;
-    clearChallengeTimer();
-    scheduleExpiry(Date.now() + result.expiresIn * 1000);
+    challengeExpiresAt = Date.now() + result.expiresIn * 1000;
+    scheduleReload(challengeExpiresAt);
   } catch (error) {
     if (
       destroyed ||
-      controller.signal.aborted ||
-      (error instanceof DOMException && error.name === 'AbortError')
+      currentGeneration !== generation ||
+      abortError(error, controller)
     ) {
       return;
     }
     await failAttempt();
   } finally {
-    if (proofController === controller) proofController = undefined;
+    if (attemptController === controller) attemptController = undefined;
   }
-}
-
-async function handleEnd(event: MouseEvent | TouchEvent) {
-  await finishAttempt(eventPageY(event));
-}
-
-function handleKeyboard(event: KeyboardEvent) {
-  const current = challenge.value;
-  if (props.disabled || !current || loading.value || passed.value) return;
-  if (event.key === 'Enter') {
-    if (!dragging) return;
-    event.preventDefault();
-    void finishAttempt(startY);
-    return;
-  }
-  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-  event.preventDefault();
-  if (!dragging) beginAttempt(0);
-  const direction = event.key === 'ArrowRight' ? 1 : -1;
-  const step = Math.max(1, current.movementWidth / 20);
-  lastX = Math.max(
-    0,
-    Math.min(current.movementWidth, lastX + direction * step),
-  );
-  pieceX.value = lastX;
-  appendInterpolatedPoint(lastX, 0, elapsedTime());
 }
 
 async function reset() {
-  slider.value?.resume();
+  slider.value?.reset();
   await loadChallenge();
-}
-
-function handleTouchCancel() {
-  if (props.disabled || (!dragging && !proofController)) return;
-  slider.value?.resume();
-  void loadChallenge();
 }
 
 defineExpose({ reset });
 
 watch(
   () => props.resetKey,
-  () => {
-    void reset();
-  },
+  () => void reset(),
 );
 
-onMounted(() => {
-  void loadChallenge();
-  window.addEventListener('resize', measure);
-  if (typeof ResizeObserver !== 'undefined') {
-    resizeObserver = new ResizeObserver(measure);
-    observeImageArea();
-  }
-});
-
+onMounted(() => void loadChallenge());
 onBeforeUnmount(() => {
   destroyed = true;
-  clearChallengeTimer();
-  abortProof();
-  stopObservingImageArea();
-  resizeObserver?.disconnect();
-  window.removeEventListener('resize', measure);
+  generation += 1;
+  challengeController?.abort();
+  abortAttempt();
+  clearExpiryTimer();
 });
 </script>
 
 <template>
-  <div
-    class="w-full max-w-[320px] overflow-hidden"
-    @touchcancel.capture="handleTouchCancel"
-  >
-    <div
+  <div class="w-full max-w-[320px] overflow-hidden">
+    <SliderTranslateCaptcha
       v-if="challenge"
-      ref="imageArea"
-      aria-label="滑块拼图验证图片"
-      :aria-disabled="props.disabled || loading || passed"
-      :aria-valuemax="challenge.movementWidth"
-      aria-valuemin="0"
-      :aria-valuenow="Math.round(pieceX)"
-      :aria-valuetext="statusText"
-      class="relative w-full max-w-[320px] touch-none overflow-hidden rounded-md"
-      data-test="image-area"
-      role="slider"
-      :tabindex="props.disabled ? -1 : 0"
-      :style="{ height: `${imageHeight}px` }"
-      @keydown="handleKeyboard"
+      ref="slider"
+      :disabled="disabled"
+      mode="server"
+      v-model="passed"
+      :puzzle="challenge.puzzle"
+      @drag-end="handleDragEnd"
+      @refresh="reset"
+    />
+    <button
+      v-if="loadFailed"
+      class="mt-2 text-sm text-primary underline-offset-4 hover:underline"
+      data-test="captcha-retry"
+      type="button"
+      @click="reset"
     >
-      <img
-        alt=""
-        class="absolute inset-0 block h-full w-full select-none"
-        data-test="background"
-        draggable="false"
-        :src="challenge.backgroundImage"
-      />
-      <img
-        alt=""
-        class="pointer-events-none absolute select-none"
-        data-test="piece"
-        draggable="false"
-        :src="challenge.pieceImage"
-        :style="{
-          height: `${pieceSize}px`,
-          left: `${pieceLeft}px`,
-          top: `${pieceTop}px`,
-          width: `${pieceSize}px`,
-        }"
-      />
-    </div>
-
-    <div v-if="challenge" ref="sliderArea" data-test="slider-area">
-      <SliderCaptcha
-        ref="slider"
-        :action-style="sliderActionStyle"
-        class="mt-3 touch-none"
-        :class="{ 'pointer-events-none opacity-60': props.disabled }"
-        is-slot
-        :model-value="passed"
-        success-text="验证通过"
-        text="请拖动滑块完成拼图"
-        @end="handleEnd"
-        @move="handleMove"
-        @start="handleStart"
-      />
-    </div>
-
-    <p class="mt-2 min-h-5 text-sm" role="status">
-      {{ statusText }}
-    </p>
+      重新加载验证码
+    </button>
+    <p class="mt-2 min-h-5 text-sm" role="status">{{ statusText }}</p>
   </div>
 </template>

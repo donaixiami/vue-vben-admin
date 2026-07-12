@@ -14,18 +14,23 @@ export namespace AuthApi {
     y: number;
   }
 
-  export interface CaptchaChallengeResult {
+  export interface CaptchaPuzzle {
     backgroundImage: string;
-    challengeId: string;
-    expiresIn: number;
     imageHeight: number;
     imageWidth: number;
     movementWidth: number;
+    pieceHeight: number;
     pieceImage: string;
     pieceWidth: number;
     pieceY: number;
+  }
+
+  export interface CaptchaChallengeResult {
+    challengeId: string;
+    expiresIn: number;
     proofDifficulty: number;
     proofNonce: string;
+    puzzle: CaptchaPuzzle;
   }
 
   export interface VerifyCaptchaParams {
@@ -60,16 +65,22 @@ export async function loginApi(data: AuthApi.LoginParams) {
   return requestClient.post<AuthApi.LoginResult>('/auth/login', data);
 }
 
-export async function getCaptchaChallengeApi() {
+export async function getCaptchaChallengeApi(signal?: AbortSignal) {
   return requestClient.post<AuthApi.CaptchaChallengeResult>(
     '/auth/captcha/challenge',
+    undefined,
+    { signal },
   );
 }
 
-export async function verifyCaptchaApi(data: AuthApi.VerifyCaptchaParams) {
+export async function verifyCaptchaApi(
+  data: AuthApi.VerifyCaptchaParams,
+  signal?: AbortSignal,
+) {
   return requestClient.post<AuthApi.VerifyCaptchaResult>(
     '/auth/captcha/verify',
     data,
+    { signal },
   );
 }
 

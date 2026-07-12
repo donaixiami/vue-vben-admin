@@ -10,22 +10,16 @@ function hasLeadingZeroHex(digest: ArrayBuffer, difficulty: number) {
   let remaining = difficulty;
   for (const byte of new Uint8Array(digest)) {
     if (remaining === 0) return true;
-    const high = byte >> 4;
-    if (high !== 0) return false;
+    if (byte >> 4 !== 0) return false;
     remaining -= 1;
     if (remaining === 0) return true;
-    const low = byte & 0x0F;
-    if (low !== 0) return false;
+    if ((byte & 0x0F) !== 0) return false;
     remaining -= 1;
   }
   return remaining === 0;
 }
 
-function yieldToBrowser() {
-  return new Promise<void>((resolve) => window.setTimeout(resolve, 0));
-}
-
-function withAbort<T>(promise: Promise<T>, signal?: AbortSignal) {
+function abortable<T>(promise: Promise<T>, signal?: AbortSignal) {
   if (!signal) return promise;
   if (signal.aborted) return Promise.reject(abortError());
   return new Promise<T>((resolve, reject) => {
@@ -47,6 +41,10 @@ function withAbort<T>(promise: Promise<T>, signal?: AbortSignal) {
   });
 }
 
+function yieldToBrowser() {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+}
+
 export async function solveCaptchaProof(
   challengeId: string,
   nonce: string,
@@ -54,16 +52,12 @@ export async function solveCaptchaProof(
   max = MAX_COUNTER,
   signal?: AbortSignal,
   startCounter = 0,
-): Promise<number> {
+) {
   if (signal?.aborted) throw abortError();
-  if (
-    typeof challengeId !== 'string' ||
-    challengeId.length > 128 ||
-    !challengeId.trim()
-  ) {
+  if (!challengeId.trim() || challengeId.length > 128) {
     throw new RangeError('Invalid captcha challenge id');
   }
-  if (typeof nonce !== 'string' || nonce.length > 64 || !nonce.trim()) {
+  if (!nonce.trim() || nonce.length > 64) {
     throw new RangeError('Invalid captcha proof nonce');
   }
   if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 3) {
@@ -87,13 +81,13 @@ export async function solveCaptchaProof(
   ) {
     if (signal?.aborted) throw abortError();
     const batchEnd = Math.min(batchStart + BATCH_SIZE - 1, max);
-    const candidates = Array.from(
+    const counters = Array.from(
       { length: batchEnd - batchStart + 1 },
       (_, index) => batchStart + index,
     );
-    const digests = await withAbort(
+    const digests = await abortable(
       Promise.all(
-        candidates.map((counter) =>
+        counters.map((counter) =>
           crypto.subtle.digest(
             'SHA-256',
             encoder.encode(`${challengeId}:${nonce}:${counter}`),
@@ -102,13 +96,11 @@ export async function solveCaptchaProof(
       ),
       signal,
     );
-    if (signal?.aborted) throw abortError();
-    const matchIndex = digests.findIndex((digest) =>
+    const match = digests.findIndex((digest) =>
       hasLeadingZeroHex(digest, difficulty),
     );
-    const matchedCounter = candidates[matchIndex];
-    if (matchedCounter !== undefined) return matchedCounter;
-    await withAbort(yieldToBrowser(), signal);
+    if (match !== -1) return counters[match] as number;
+    await abortable(yieldToBrowser(), signal);
   }
 
   throw new Error('Captcha proof could not be solved');

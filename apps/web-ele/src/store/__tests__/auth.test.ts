@@ -3,9 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useAuthStore } from '../auth';
 
-const { loginApi } = vi.hoisted(() => ({
-  loginApi: vi.fn(),
-}));
+const { loginApi } = vi.hoisted(() => ({ loginApi: vi.fn() }));
 
 vi.mock('#/api', () => ({
   getAccessCodesApi: vi.fn(),
@@ -13,7 +11,6 @@ vi.mock('#/api', () => ({
   loginApi,
   logoutApi: vi.fn(),
 }));
-
 vi.mock('vue-router', () => ({
   useRouter: () => ({
     currentRoute: { value: { fullPath: '/' } },
@@ -21,11 +18,9 @@ vi.mock('vue-router', () => ({
     replace: vi.fn(),
   }),
 }));
-
 vi.mock('@vben/preferences', () => ({
   preferences: { app: { defaultHomePath: '/' } },
 }));
-
 vi.mock('@vben/stores', () => ({
   resetAllStores: vi.fn(),
   useAccessStore: () => ({
@@ -36,7 +31,6 @@ vi.mock('@vben/stores', () => ({
   }),
   useUserStore: () => ({ setUserInfo: vi.fn() }),
 }));
-
 vi.mock('element-plus', () => ({ ElNotification: vi.fn() }));
 vi.mock('#/locales', () => ({ $t: (key: string) => key }));
 
@@ -56,7 +50,6 @@ describe('auth store login', () => {
         captchaToken: 'captcha-token',
         password: 'secret',
         selectAccount: 'admin',
-        track: [{ t: 0, x: 0, y: 0 }],
         username: 'admin',
       }),
     ).rejects.toThrow('login failed');

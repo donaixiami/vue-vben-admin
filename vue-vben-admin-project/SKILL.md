@@ -70,6 +70,7 @@ Read these before editing related behavior:
 - Remove empty query values before passing them to backend when the module has that convention.
 - Use structured request parameters instead of string-building.
 - If `VITE_GLOB_API_URL` is absolute, Vite proxy is bypassed. Use `/api` when proxy behavior is required.
+- Login requires a one-time `captchaToken`. The shared `SliderTranslateCaptcha` server mode only renders `puzzle` data and emits drag evidence; `apps/web-ele` owns challenge loading, PoW, verify, TTL, cancellation, and token handling.
 
 ## Page And Module Pattern
 

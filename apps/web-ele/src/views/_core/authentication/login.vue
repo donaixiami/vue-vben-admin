@@ -91,9 +91,9 @@ const formSchema = computed((): VbenFormSchema[] => {
         resetKey: captchaResetKey.value,
       },
       fieldName: 'captchaToken',
-      rules: z
-        .string()
-        .min(1, { message: $t('authentication.verifyRequiredTip') }),
+      rules: z.string().min(1, {
+        message: $t('authentication.verifyRequiredTip'),
+      }),
     },
   ];
 });
