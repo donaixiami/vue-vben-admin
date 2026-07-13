@@ -95,10 +95,12 @@ describe('system config value editor', () => {
       expect.objectContaining({ component: 'Select' }),
     ]);
     expect(actions.setValues).toHaveBeenCalledWith(values);
-    const setStateOrder = actions.setState.mock.invocationCallOrder[0] ?? Infinity;
+    const setStateOrder =
+      actions.setState.mock.invocationCallOrder[0] ?? Infinity;
     const updateSchemaOrder =
       actions.updateSchema.mock.invocationCallOrder[0] ?? Infinity;
-    const setValuesOrder = actions.setValues.mock.invocationCallOrder[0] ?? Infinity;
+    const setValuesOrder =
+      actions.setValues.mock.invocationCallOrder[0] ?? Infinity;
     expect(setStateOrder).toBeLessThan(updateSchemaOrder);
     expect(updateSchemaOrder).toBeLessThan(setValuesOrder);
   });
