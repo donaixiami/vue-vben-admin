@@ -8,6 +8,8 @@ import { z } from '#/adapter/form';
 import { getSystemConfigKeyExists } from '#/api';
 import { $t } from '#/locales';
 
+import { createConfigValueSchema } from './modules/value-editor';
+
 const SYSTEM_FLAG_OPTIONS = [
   { label: '是', type: 'success', value: true },
   { label: '否', type: 'info', value: false },
@@ -26,9 +28,7 @@ function formatConfigValue({
   if (SENSITIVE_CONFIG_KEYS.has(row.config_key)) {
     return SENSITIVE_VALUE_MASK;
   }
-  return cellValue === null || cellValue === undefined
-    ? ''
-    : String(cellValue);
+  return cellValue === null || cellValue === undefined ? '' : String(cellValue);
 }
 
 export function useFormSchema(
@@ -76,17 +76,7 @@ export function useFormSchema(
           }),
         ),
     },
-    {
-      component: 'Textarea',
-      componentProps: {
-        autosize: { maxRows: 8, minRows: 4 },
-        maxlength: 3000,
-        showWordLimit: true,
-      },
-      fieldName: 'config_value',
-      formItemClass: 'items-start',
-      label: '参数键值',
-    },
+    createConfigValueSchema(),
     {
       component: 'RadioGroup',
       componentProps: {

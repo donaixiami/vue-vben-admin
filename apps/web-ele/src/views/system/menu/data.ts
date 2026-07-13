@@ -51,6 +51,20 @@ export function useColumns(
     },
     {
       align: 'center',
+      editRender: {
+        attrs: {
+          class: 'vxe-default-input w-full px-2',
+          type: 'number',
+        },
+        name: 'input',
+      },
+      field: 'meta.order',
+      formatter: ({ row }) => normalizeMenuOrder(row.meta?.order),
+      title: '排序',
+      width: 100,
+    },
+    {
+      align: 'center',
       cellRender: { name: 'CellTag', options: getMenuTypeOptions() },
       field: 'type',
       title: $t('system.menu.type'),
@@ -89,20 +103,7 @@ export function useColumns(
       minWidth: 200,
       title: $t('system.menu.component'),
     },
-    {
-      align: 'center',
-      editRender: {
-        attrs: {
-          class: 'vxe-default-input w-full px-2',
-          type: 'number',
-        },
-        name: 'input',
-      },
-      field: 'meta.order',
-      formatter: ({ row }) => normalizeMenuOrder(row.meta?.order),
-      title: '排序',
-      width: 100,
-    },
+
     {
       cellRender: { name: 'CellTag' },
       field: 'status',

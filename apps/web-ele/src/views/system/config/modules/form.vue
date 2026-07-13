@@ -9,6 +9,10 @@ import { useVbenForm } from '#/adapter/form';
 import { createSystemConfig, updateSystemConfig } from '#/api';
 
 import { useFormSchema } from '../data';
+import {
+  hydrateSystemConfigForm,
+  normalizeSystemConfigSubmitValues,
+} from './value-editor';
 
 const emits = defineEmits(['success']);
 
@@ -20,32 +24,18 @@ const [Form, formApi] = useVbenForm({
   showDefaultActions: false,
 });
 
-function normalizeNullableText(value: null | string | undefined) {
-  if (value === undefined || value === null) return null;
-  return value.trim() === '' ? null : value;
-}
-
-function normalizeSubmitValues(
-  values: SystemConfigApi.UpdateConfigParams,
-): SystemConfigApi.CreateConfigParams {
-  return {
-    config_key: values.config_key?.trim() ?? '',
-    config_value: normalizeNullableText(values.config_value),
-    is_system: values.is_system ?? false,
-    name: values.name?.trim() ?? '',
-    remark: normalizeNullableText(values.remark),
-  };
-}
-
 const [Drawer, drawerApi] = useVbenDrawer({
   class: 'w-[720px]',
   async onConfirm() {
     const { valid } = await formApi.validate();
     if (!valid) return;
 
-    const values =
-      await formApi.getValues<SystemConfigApi.UpdateConfigParams>();
-    const payload = normalizeSubmitValues(values);
+    const values = await formApi.getValues<
+      Omit<SystemConfigApi.UpdateConfigParams, 'config_value'> & {
+        config_value?: null | number | string;
+      }
+    >();
+    const payload = normalizeSystemConfigSubmitValues(values);
 
     drawerApi.lock();
     (id.value
@@ -69,10 +59,15 @@ const [Drawer, drawerApi] = useVbenDrawer({
       formData.value = data?.id ? data : undefined;
 
       await nextTick();
-      formApi.setValues({
-        ...data,
-        is_system: data?.is_system ?? false,
-      });
+      await hydrateSystemConfigForm(
+        formApi,
+        useFormSchema(formData),
+        data?.config_key,
+        {
+          ...data,
+          is_system: data?.is_system ?? false,
+        },
+      );
     }
   },
 });

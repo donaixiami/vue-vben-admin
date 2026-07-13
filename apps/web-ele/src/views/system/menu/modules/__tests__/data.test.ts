@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { enqueueMenuOrderSave, useColumns } from '../../data';
+import menuListSource from '../../list.vue?raw';
 import { persistMenuOrder } from '../menu-order';
 
 vi.mock('#/locales', () => ({ $t: (key: string) => key }));
@@ -138,5 +139,15 @@ describe('menu order save queue', () => {
       ['12', 4],
     ]);
     expect(row.meta.order).toBe(4);
+  });
+});
+
+describe('menu order grid event wiring', () => {
+  it('registers edit events through the Vben gridEvents option', () => {
+    expect(menuListSource).toMatch(
+      /gridEvents:\s*{[\s\S]*editActivated:\s*onEditActivated[\s\S]*editClosed:\s*onEditClosed/,
+    );
+    expect(menuListSource).not.toContain('@edit-activated');
+    expect(menuListSource).not.toContain('@edit-closed');
   });
 });

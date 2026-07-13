@@ -34,6 +34,10 @@ const [FormDrawer, formDrawerApi] = useVbenDrawer({
 });
 
 const [Grid, gridApi] = useVbenVxeGrid({
+  gridEvents: {
+    editActivated: onEditActivated,
+    editClosed: onEditClosed,
+  },
   gridOptions: {
     columns: useColumns(onActionClick),
     editConfig: {
@@ -164,7 +168,7 @@ function onDelete(row: SystemMenuApi.SystemMenu) {
 <template>
   <Page auto-content-height>
     <FormDrawer @success="onRefresh" />
-    <Grid @edit-activated="onEditActivated" @edit-closed="onEditClosed">
+    <Grid>
       <template #toolbar-tools>
         <ElButton type="primary" @click="onCreate">
           <Plus class="size-5" />
