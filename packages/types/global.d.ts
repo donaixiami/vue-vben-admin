@@ -9,6 +9,7 @@ declare module 'vue-router' {
 
 export interface VbenAdminProAppConfigRaw {
   VITE_GLOB_API_URL: string;
+  VITE_GLOB_CAPTCHA_ENABLED?: string;
   VITE_GLOB_AUTH_DINGDING_CLIENT_ID: string;
   VITE_GLOB_AUTH_DINGDING_CORP_ID: string;
 }
@@ -23,6 +24,7 @@ interface AuthConfig {
 export interface ApplicationConfig {
   apiURL: string;
   auth: AuthConfig;
+  captchaEnabled: boolean;
 }
 
 declare global {

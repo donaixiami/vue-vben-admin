@@ -5,6 +5,7 @@ import type { BasicOption, Recordable } from '@vben/types';
 import { computed, markRaw, ref } from 'vue';
 
 import { AuthenticationLogin, z } from '@vben/common-ui';
+import { useAppConfig } from '@vben/hooks';
 import { $t } from '@vben/locales';
 
 import { useAuthStore } from '#/store';
@@ -14,6 +15,7 @@ import ServerSliderCaptcha from './server-slider-captcha.vue';
 defineOptions({ name: 'Login' });
 
 const authStore = useAuthStore();
+const { captchaEnabled } = useAppConfig(import.meta.env, import.meta.env.PROD);
 const captchaResetKey = ref(0);
 const submitting = ref(false);
 
@@ -35,7 +37,7 @@ const MOCK_USER_OPTIONS: BasicOption[] = [
 ];
 
 const formSchema = computed((): VbenFormSchema[] => {
-  return [
+  const schema: VbenFormSchema[] = [
     // {
     //   component: 'VbenSelect',
     //   componentProps: {
@@ -84,7 +86,10 @@ const formSchema = computed((): VbenFormSchema[] => {
       label: $t('authentication.password'),
       rules: z.string().min(1, { message: $t('authentication.passwordTip') }),
     },
-    {
+  ];
+
+  if (captchaEnabled) {
+    schema.push({
       component: markRaw(ServerSliderCaptcha),
       componentProps: {
         disabled: authStore.loginLoading || submitting.value,
@@ -94,8 +99,10 @@ const formSchema = computed((): VbenFormSchema[] => {
       rules: z.string().min(1, {
         message: $t('authentication.verifyRequiredTip'),
       }),
-    },
-  ];
+    });
+  }
+
+  return schema;
 });
 
 function handleSubmit(values: Recordable<any>) {

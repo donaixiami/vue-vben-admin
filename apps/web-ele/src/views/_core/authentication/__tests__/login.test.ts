@@ -1,7 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, h, nextTick } from 'vue';
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Login from '../login.vue';
 import ServerSliderCaptcha from '../server-slider-captcha.vue';
@@ -65,9 +65,15 @@ const loginValues = {
 };
 
 describe('login page', () => {
+  // 本套用例验证“开启验证码”时的登录页行为；关闭场景见 captcha-config.test.ts
   beforeEach(() => {
+    vi.stubEnv('VITE_GLOB_CAPTCHA_ENABLED', 'true');
     authStore.authLogin.mockReset();
     authStore.loginLoading = false;
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it('uses only username, password, and required server captcha token fields', () => {

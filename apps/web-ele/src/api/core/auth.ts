@@ -3,7 +3,7 @@ import { baseRequestClient, requestClient } from '#/api/request';
 export namespace AuthApi {
   /** 登录接口参数 */
   export interface LoginParams {
-    captchaToken: string;
+    captchaToken?: string;
     password: string;
     username: string;
   }

@@ -516,3 +516,9 @@ When starting a new session:
 - challenge 在 `always`、`never` 下各生成一次并目视确认，分别为双缺口和单缺口；临时配置最终已恢复 `random/50`。接口业务响应为 `code=0`，但 POST 的实际 HTTP 状态为 `201`。
 - 本次前端运行检查仅确认 5777 的 HTML 应用壳可访问，以及后端参数列表 API 提供页面展示/编辑所需记录；未登录后台，也未执行登录后的参数页浏览器交互。
 - 2026-07-14 当前未提交状态：验证码参数页涉及 `apps/web-ele/src/views/system/config/data.ts`、`modules/form.vue`、`modules/value-editor.ts`、`modules/__tests__/value-editor.test.ts`；同时仍需保留既有菜单 `data.ts`、`list.vue`、`modules/__tests__/data.test.ts` 和用户 `list.vue` 改动，本文档本身也处于未提交状态。
+
+## 2026-07-21 非宴均通用增强已落地
+
+- 登录验证码开关：`VITE_GLOB_CAPTCHA_ENABLED`（经 `useAppConfig().captchaEnabled`）
+- 相关：`apps/web-ele` 登录页、`packages/effects/hooks`、`packages/types/global.d.ts`
+- monorepo 待实现设计（聊天/媒体/CAS）见根 `docs/SESSION_RESTORE.md` 与 `docs/superpowers/specs/`

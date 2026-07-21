@@ -69,9 +69,9 @@ describe('captcha auth API types', () => {
     }>();
   });
 
-  it('requires exactly the three login credential strings', () => {
+  it('allows captchaToken to be omitted when captcha is disabled', () => {
     expectTypeOf<AuthApi.LoginParams>().toEqualTypeOf<{
-      captchaToken: string;
+      captchaToken?: string;
       password: string;
       username: string;
     }>();

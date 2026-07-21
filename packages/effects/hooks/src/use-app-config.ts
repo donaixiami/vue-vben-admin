@@ -17,6 +17,7 @@ export function useAppConfig(
 
   const {
     VITE_GLOB_API_URL,
+    VITE_GLOB_CAPTCHA_ENABLED,
     VITE_GLOB_AUTH_DINGDING_CORP_ID,
     VITE_GLOB_AUTH_DINGDING_CLIENT_ID,
   } = config;
@@ -24,6 +25,9 @@ export function useAppConfig(
   const applicationConfig: ApplicationConfig = {
     apiURL: VITE_GLOB_API_URL,
     auth: {},
+    captchaEnabled:
+      typeof VITE_GLOB_CAPTCHA_ENABLED === 'string' &&
+      VITE_GLOB_CAPTCHA_ENABLED.trim().toLowerCase() === 'true',
   };
   if (VITE_GLOB_AUTH_DINGDING_CORP_ID && VITE_GLOB_AUTH_DINGDING_CLIENT_ID) {
     applicationConfig.auth.dingding = {
