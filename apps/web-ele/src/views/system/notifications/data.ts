@@ -7,7 +7,7 @@ import type { SystemNotificationsApi } from '#/api';
 
 import { markRaw, ref } from 'vue';
 
-import { upload_file } from '#/api/common/upload';
+import { createPrivateUploadRequest } from '#/api/common/upload';
 import { getDictionaryByIdentifier } from '#/api/system/dictionary';
 import { $t } from '#/locales';
 
@@ -121,12 +121,12 @@ export function useFormSchema(): VbenFormSchema[] {
       component: 'Upload',
       componentProps: {
         accept: '.png,.jpg,.jpeg',
-        httpRequest: upload_file,
+        httpRequest: createPrivateUploadRequest('notification'),
         onSuccess: (response: any, uploadFile: any) => {
-          const url = response?.url ?? response?.file_url;
-          if (url) {
-            uploadFile.url = url;
+          if (uploadFile?.raw instanceof File) {
+            uploadFile.url = URL.createObjectURL(uploadFile.raw);
           }
+          uploadFile.response = response;
         },
         disabled: false,
         limit: 1,

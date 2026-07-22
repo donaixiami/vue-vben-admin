@@ -24,6 +24,11 @@
 
 import type { Socket } from 'socket.io-client';
 
+import type {
+  ChatAttachmentView,
+  PendingChatAttachment,
+} from './modules/chat-attachment';
+
 // Vue 组合式 API：computed 派生状态、nextTick DOM 更新后执行、
 // onBeforeUnmount 卸载前清理、ref 定义响应式变量。
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue';
@@ -37,10 +42,21 @@ import { useAppConfig } from '@vben/hooks';
 import { useAccessStore, useUserStore } from '@vben/stores';
 
 // Element Plus 组件与消息提示（本项目 UI 库）。
-import { ElButton, ElInput, ElMessage, ElTag } from 'element-plus';
+import { ElButton, ElImage, ElInput, ElMessage, ElTag } from 'element-plus';
 // Socket.IO 客户端：io() 建连接，Socket 是连接实例类型。
 import { io } from 'socket.io-client';
 
+import { revokeChatAsset, uploadChatAsset } from '#/api/common/upload';
+import {
+  resolveChatAssetBlobUrl,
+  revokePrivateBlobUrl,
+} from '#/utils/private-blob';
+
+import {
+  buildSendPayload,
+  canSendWithAttachment,
+  normalizeMessageAttachments,
+} from './modules/chat-attachment';
 import { createSeenMessageTracker } from './modules/message-sync';
 
 // 连接状态机：未连 / 连接中 / 已连 / 异常，用于顶部状态标签。
@@ -49,6 +65,7 @@ type ConnectionStatus = 'closed' | 'connected' | 'connecting' | 'error';
 // 页面内部统一的消息结构。后端不同事件/接口返回的字段名不一致，
 // 都会先经过 normalizeMessage() 归一成这个形状再渲染。
 interface ChatMessage {
+  attachments: ChatAttachmentView[];
   content: string; // 消息正文
   createdAt?: string; // 发送时间
   id: number | string; // 消息 id（后端 id 或本地临时 id）
@@ -75,6 +92,11 @@ const historyUrl = ref('/chat/history'); // 历史消息接口前缀
 const sessionUrl = ref('/chat/session'); // 建/取会话接口
 const messageText = ref(''); // 输入框里正在编辑的消息
 const messages = ref<ChatMessage[]>([]); // 消息列表
+const pendingAttachment = ref<null | PendingChatAttachment>(null);
+const pendingAttachmentFile = ref<File>();
+const attachmentInputRef = ref<HTMLInputElement>();
+const attachmentBlobUrls = ref<Record<number, string>>({});
+const attachmentLoadErrors = ref<Record<number, boolean>>({});
 const rawEvents = ref<string[]>([]); // 右侧原始事件调试面板
 const messageListRef = ref<HTMLElement>(); // 消息列表容器 DOM 引用（用于滚动到底）
 
@@ -226,6 +248,7 @@ function normalizeMessage(input: any, fallbackContent = ''): ChatMessage {
   const senderId = data?.sender_id ?? data?.senderId ?? data?.user_id;
 
   return {
+    attachments: normalizeMessageAttachments(data),
     content: String(content ?? ''),
     createdAt:
       data?.created_at ??
@@ -250,11 +273,110 @@ function appendMessage(input: unknown, fallbackContent = '') {
     return;
   }
   const message = normalizeMessage(input, fallbackContent);
-  if (!message.content) {
+  if (!message.content && message.attachments.length === 0) {
     return;
   }
   messages.value.push(message);
+  void loadAttachmentBlobs(message.attachments);
   scrollToBottom();
+}
+
+async function loadAttachmentBlobs(attachments: ChatAttachmentView[]) {
+  await Promise.all(
+    attachments.map(async (attachment) => {
+      if (
+        attachment.status === 'revoked' ||
+        attachmentBlobUrls.value[attachment.assetId] ||
+        attachmentLoadErrors.value[attachment.assetId]
+      ) {
+        return;
+      }
+      try {
+        const url = await resolveChatAssetBlobUrl(attachment.assetId);
+        attachmentBlobUrls.value = {
+          ...attachmentBlobUrls.value,
+          [attachment.assetId]: url,
+        };
+      } catch {
+        attachmentLoadErrors.value = {
+          ...attachmentLoadErrors.value,
+          [attachment.assetId]: true,
+        };
+      }
+    }),
+  );
+}
+
+function openAttachmentPicker() {
+  attachmentInputRef.value?.click();
+}
+
+function releasePendingPreview() {
+  revokePrivateBlobUrl(pendingAttachment.value?.localPreviewUrl);
+}
+
+function getAttachmentBlobUrl(assetId: number): string {
+  return attachmentBlobUrls.value[assetId] || '';
+}
+
+async function uploadSelectedAttachment(file: File) {
+  releasePendingPreview();
+  const kind = file.type.startsWith('image/') ? 'image' : 'file';
+  const localPreviewUrl =
+    kind === 'image' ? URL.createObjectURL(file) : undefined;
+  pendingAttachmentFile.value = file;
+  pendingAttachment.value = {
+    fileName: file.name,
+    kind,
+    localPreviewUrl,
+    mimeType: file.type || 'application/octet-stream',
+    size: file.size,
+    status: 'uploading',
+  };
+  try {
+    const uploaded = await uploadChatAsset(file);
+    pendingAttachment.value = {
+      ...pendingAttachment.value,
+      assetId: uploaded.assetId,
+      kind: uploaded.kind,
+      mimeType: uploaded.mimeType,
+      size: uploaded.byteSize,
+      status: 'ready',
+    };
+  } catch (error) {
+    pendingAttachment.value = {
+      ...pendingAttachment.value,
+      error: error instanceof Error ? error.message : '上传失败',
+      status: 'failed',
+    };
+  }
+}
+
+function onAttachmentSelected(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (file) void uploadSelectedAttachment(file);
+}
+
+async function retryPendingAttachment() {
+  if (pendingAttachmentFile.value) {
+    await uploadSelectedAttachment(pendingAttachmentFile.value);
+  }
+}
+
+async function removePendingAttachment(revokeAsset = true) {
+  const assetId = pendingAttachment.value?.assetId;
+  releasePendingPreview();
+  pendingAttachment.value = null;
+  pendingAttachmentFile.value = undefined;
+  if (revokeAsset && assetId) {
+    try {
+      await revokeChatAsset(assetId);
+    } catch {
+      ElMessage.error('附件撤销失败，请稍后重试');
+    }
+  }
 }
 
 function isCurrentSessionEvent(input: any) {
@@ -451,6 +573,9 @@ async function loadHistory() {
           return normalizeMessage(item);
         })
       : [];
+    void loadAttachmentBlobs(
+      messages.value.flatMap((item) => item.attachments),
+    );
     scrollToBottom();
   } catch (error) {
     ElMessage.error(
@@ -463,7 +588,7 @@ async function loadHistory() {
 // 服务端会通过 receiveMessage 广播真实消息，所以这里不本地追加，避免重复。
 async function sendMessage() {
   const content = messageText.value.trim();
-  if (!content) {
+  if (!canSendWithAttachment(content, pendingAttachment.value)) {
     return;
   }
 
@@ -474,18 +599,25 @@ async function sendMessage() {
   }
 
   const sessionId = parseSessionId(conversationId.value);
+  if (!sessionId) {
+    ElMessage.error('请输入有效的会话 ID');
+    return;
+  }
   const clientMsgId = `${Date.now()}-${Math.random()}`; // 客户端消息 id，后端据此幂等去重
 
   try {
     // emitWithAck 返回 Promise，配合 timeout(ms) 可在无 ack 时超时。
     const ack = await socket
       .timeout(10_000)
-      .emitWithAck('sendMessage', {
-        clientMsgId,
-        content,
-        sessionId,
-        type: 'text',
-      })
+      .emitWithAck(
+        'sendMessage',
+        buildSendPayload({
+          clientMsgId,
+          content,
+          pending: pendingAttachment.value,
+          sessionId,
+        }),
+      )
       .catch(() => {
         throw new Error('消息发送超时');
       });
@@ -495,6 +627,7 @@ async function sendMessage() {
     }
     // 成功后清空输入框；真实消息会经 receiveMessage 回来。
     messageText.value = '';
+    await removePendingAttachment(false);
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '消息发送失败');
   }
@@ -519,6 +652,10 @@ function scrollToBottom() {
 // 组件卸载前断开连接，防止内存泄漏和野连接。
 onBeforeUnmount(() => {
   closeConnection();
+  releasePendingPreview();
+  Object.values(attachmentBlobUrls.value).forEach((url) =>
+    revokePrivateBlobUrl(url),
+  );
 });
 </script>
 
@@ -605,13 +742,113 @@ onBeforeUnmount(() => {
                 <div class="whitespace-pre-wrap break-words">
                   {{ message.content }}
                 </div>
+                <div
+                  v-for="attachment in message.attachments"
+                  :key="attachment.assetId"
+                  class="mt-2 min-w-60 rounded-md border border-current/15 bg-white/70 p-2 text-foreground"
+                >
+                  <div
+                    v-if="attachment.status === 'revoked'"
+                    class="text-xs text-danger"
+                  >
+                    附件已撤销
+                  </div>
+                  <div
+                    v-else-if="attachmentLoadErrors[attachment.assetId]"
+                    class="text-xs text-muted-foreground"
+                  >
+                    附件不可用
+                  </div>
+                  <ElImage
+                    v-else-if="
+                      attachment.kind === 'image' &&
+                      getAttachmentBlobUrl(attachment.assetId)
+                    "
+                    :src="getAttachmentBlobUrl(attachment.assetId)"
+                    :preview-src-list="[
+                      getAttachmentBlobUrl(attachment.assetId),
+                    ]"
+                    class="max-h-56 w-full rounded object-cover"
+                    fit="contain"
+                    preview-teleported
+                  />
+                  <a
+                    v-else-if="getAttachmentBlobUrl(attachment.assetId)"
+                    :href="getAttachmentBlobUrl(attachment.assetId)"
+                    class="flex items-center justify-between gap-4 text-sm text-primary"
+                    rel="noopener"
+                    target="_blank"
+                  >
+                    <span class="truncate">{{
+                      attachment.fileName || '附件'
+                    }}</span>
+                    <span class="shrink-0">打开</span>
+                  </a>
+                  <div v-else class="text-xs text-muted-foreground">
+                    附件加载中
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- 输入区：Ctrl+Enter 发送 -->
           <div class="border-t border-border p-4">
+            <input
+              ref="attachmentInputRef"
+              class="hidden"
+              type="file"
+              @change="onAttachmentSelected"
+            />
+            <div
+              v-if="pendingAttachment"
+              class="mb-3 flex items-center gap-3 rounded-[var(--radius)] border border-border bg-muted/40 p-3"
+            >
+              <ElImage
+                v-if="
+                  pendingAttachment.kind === 'image' &&
+                  pendingAttachment.localPreviewUrl
+                "
+                :src="pendingAttachment.localPreviewUrl"
+                class="size-12 shrink-0 rounded object-cover"
+                fit="cover"
+              />
+              <div
+                v-else
+                class="flex size-12 shrink-0 items-center justify-center rounded bg-muted text-xs font-semibold"
+              >
+                FILE
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="truncate text-sm font-medium">
+                  {{ pendingAttachment.fileName }}
+                </div>
+                <div class="mt-1 text-xs text-muted-foreground">
+                  <span v-if="pendingAttachment.status === 'uploading'">正在上传…</span>
+                  <span
+                    v-else-if="pendingAttachment.status === 'ready'"
+                    class="text-success"
+                    >上传完成</span>
+                  <span v-else class="text-danger">上传失败</span>
+                  · {{ (pendingAttachment.size / 1024).toFixed(1) }} KB
+                </div>
+              </div>
+              <ElButton
+                v-if="pendingAttachment.status === 'failed'"
+                link
+                type="primary"
+                @click="retryPendingAttachment"
+              >
+                重试
+              </ElButton>
+              <ElButton link type="danger" @click="removePendingAttachment()">
+                移除
+              </ElButton>
+            </div>
             <div class="flex gap-3">
+              <ElButton class="self-end" @click="openAttachmentPicker">
+                附件
+              </ElButton>
               <ElInput
                 v-model="messageText"
                 :autosize="{ minRows: 2, maxRows: 4 }"
@@ -619,7 +856,14 @@ onBeforeUnmount(() => {
                 type="textarea"
                 @keydown.ctrl.enter.prevent="sendMessage"
               />
-              <ElButton type="primary" class="self-end" @click="sendMessage">
+              <ElButton
+                type="primary"
+                class="self-end"
+                :disabled="
+                  !canSendWithAttachment(messageText, pendingAttachment)
+                "
+                @click="sendMessage"
+              >
                 发送
               </ElButton>
             </div>

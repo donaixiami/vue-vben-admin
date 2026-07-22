@@ -1,10 +1,10 @@
-<script lang="ts" setup>
+﻿<script lang="ts" setup>
 import type { VbenFormSchema } from '#/adapter/form';
 import type { SystemDeptApi } from '#/api/system/dept';
 import type { SystemRoleApi } from '#/api/system/role';
 import type { SystemUserApi } from '#/api/system/user';
 
-import { computed, h, nextTick, ref } from 'vue';
+import { computed, h, nextTick, onBeforeUnmount, ref } from 'vue';
 
 import { useVbenDrawer } from '@vben/common-ui';
 import { getPopupContainer } from '@vben/utils';
@@ -12,11 +12,16 @@ import { getPopupContainer } from '@vben/utils';
 import { ElDialog } from 'element-plus';
 
 import { useVbenForm, z } from '#/adapter/form';
-import { upload_file } from '#/api/common/upload';
+import { createPrivateUploadRequest } from '#/api/common/upload';
 import { getDeptList } from '#/api/system/dept';
 import { getRoleList } from '#/api/system/role';
 import { createUser, updateUser } from '#/api/system/user';
 import { $t } from '#/locales';
+import {
+  resolvePrivateBlobUrl,
+  revokePrivateBlobUrl,
+} from '#/utils/private-blob';
+import { buildUserSubmitPayload } from '#/utils/private-upload-form';
 const emits = defineEmits(['success']);
 
 const formData = ref<SystemUserApi.SystemUser>();
@@ -29,18 +34,30 @@ const [Form, formApi] = useVbenForm({
 
 const dialogVisible = ref(false);
 const dialogImageUrl = ref('');
+const previewBlobUrl = ref<null | string>(null);
+
+function releasePreviewBlob() {
+  revokePrivateBlobUrl(previewBlobUrl.value);
+  previewBlobUrl.value = null;
+}
+
+onBeforeUnmount(releasePreviewBlob);
 function useFormSchema(): VbenFormSchema[] {
   return [
     {
       component: 'Upload',
       componentProps: {
         accept: '.png,.jpg,.jpeg',
-        httpRequest: upload_file,
+        httpRequest: createPrivateUploadRequest('avatar'),
         onSuccess: (response: any, uploadFile: any) => {
-          const url = response?.url ?? response?.file_url;
-          if (url) {
-            uploadFile.url = url;
+          // 本地 File 预览即可；response 只保留 uploadRef 供提交
+          if (uploadFile?.raw instanceof File) {
+            const localUrl = URL.createObjectURL(uploadFile.raw);
+            revokePrivateBlobUrl(previewBlobUrl.value);
+            previewBlobUrl.value = localUrl;
+            uploadFile.url = localUrl;
           }
+          uploadFile.response = response;
         },
         disabled: false,
         maxCount: 1,
@@ -261,19 +278,12 @@ const [Drawer, drawerApi] = useVbenDrawer({
   async onConfirm() {
     const { valid } = await formApi.validate();
     if (!valid) return;
-    const values = (await formApi.getValues()) as SystemUserApi.SystemUser;
-    const response = values.avatars?.[0]?.response as {
-      id: string;
-      url: string;
-    };
-    delete values.avatars;
-    delete values.password;
-    if (response && response.id) {
-      values.avatar_file_id = Number(response.id);
-    }
+    const values = buildUserSubmitPayload(
+      (await formApi.getValues()) as SystemUserApi.SystemUser,
+    );
 
     drawerApi.lock();
-    (id.value ? updateUser(id.value, values) : createUser(values))
+    (id.value ? updateUser(id.value, values as any) : createUser(values as any))
       .then(() => {
         emits('success');
         drawerApi.close();
@@ -284,33 +294,44 @@ const [Drawer, drawerApi] = useVbenDrawer({
   },
 
   async onOpenChange(isOpen) {
-    if (isOpen) {
-      const data = drawerApi.getData<SystemUserApi.SystemUser>();
-      formApi.resetForm();
-      if (data && data?.avatar) {
+    if (!isOpen) {
+      releasePreviewBlob();
+      return;
+    }
+    const data = drawerApi.getData<SystemUserApi.SystemUser>();
+    formApi.resetForm();
+    releasePreviewBlob();
+
+    if (data) {
+      formData.value = data;
+      id.value = data.id;
+    } else {
+      formData.value = undefined;
+      id.value = undefined;
+    }
+
+    await nextTick();
+    if (data) {
+      formApi.setValues(data);
+    }
+
+    const mediaRef = (data as any)?.avatarMediaRef as string | undefined;
+    if (mediaRef) {
+      try {
+        const url = await resolvePrivateBlobUrl(mediaRef);
+        previewBlobUrl.value = url;
         formApi.setValues({
           avatars: [
             {
-              name: 'example.png',
+              name: 'avatar.png',
               status: 'done',
               uid: '-1',
-              url: data?.avatar || '',
+              url,
             },
           ],
         });
-      }
-
-      if (data) {
-        formData.value = data;
-        id.value = data.id;
-      } else {
-        id.value = undefined;
-      }
-
-      // Wait for Vue to flush DOM updates (form fields mounted)
-      await nextTick();
-      if (data) {
-        formApi.setValues(data);
+      } catch {
+        // 预览失败不阻塞其它字段编辑
       }
     }
   },

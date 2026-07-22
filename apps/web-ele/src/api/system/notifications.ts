@@ -15,7 +15,8 @@ export namespace SystemNotificationsApi {
 
   export interface SystemNotifications {
     [key: string]: any;
-    avatar: string;
+    avatar: null | string;
+    avatarMediaRef?: null | string;
     created_at: null | string;
     id: NotificationId;
     is_deleted?: boolean;
@@ -92,7 +93,8 @@ export namespace SystemNotificationsApi {
   }
 
   export interface CreateNotificationsParams extends Recordable<any> {
-    avatars?: (File & { response: { id: string; url: string } })[];
+    avatarUploadRef?: string;
+    avatars?: Array<{ response?: { uploadRef?: string } }>;
     message: string;
     metadata?: null | Recordable<any>;
     priority?: NotificationPriority;
@@ -100,7 +102,6 @@ export namespace SystemNotificationsApi {
     related_link?: null | string;
     send_now?: boolean;
     send_status?: NotificationSendStatus;
-    avatar_file_id?: number;
     target_ids?: number[];
     target_type?: NotificationTargetType;
     title?: string;

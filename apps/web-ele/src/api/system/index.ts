@@ -7,4 +7,5 @@ export * from './login-log';
 export * from './menu';
 export * from './notifications';
 export * from './role';
+export * from './storage-source';
 export * from './user';

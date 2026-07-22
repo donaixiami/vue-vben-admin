@@ -1,41 +1,57 @@
-<script lang="ts" setup>
+﻿<script lang="ts" setup>
 import type {
   OnActionClickParams,
   VxeTableGridOptions,
 } from '#/adapter/vxe-table';
 import type { SystemFileApi } from '#/api/system/file';
 
-import { Page, useVbenModal } from '@vben/common-ui';
-import { Plus } from '@vben/icons';
+import { onBeforeUnmount, ref } from 'vue';
 
-import { ElButton, ElImage, ElMessage } from 'element-plus';
+import { Page } from '@vben/common-ui';
+
+import { ElDialog, ElImage, ElMessage } from 'element-plus';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { deleteFile, getFileList } from '#/api/system/file';
-// auto-height-modal
-import AutoHeightModal from '#/components/modals/auto-height-modal.vue';
 import { $t } from '#/locales';
 
-import { useColumns } from './data';
+import { useColumns, useGridFormSchema } from './data';
+import {
+  loadFileImagePreview,
+  releaseFileImagePreview,
+} from './modules/file-image-preview';
 
-const [Modal, modalApi] = useVbenModal({
-  connectedComponent: AutoHeightModal,
-  destroyOnClose: true,
-});
-function open() {
-  modalApi.setData({ title: '我的标题', length: 5 }).open();
+const previewVisible = ref(false);
+const previewName = ref('');
+const previewUrl = ref('');
+
+function releasePreview() {
+  releaseFileImagePreview(previewUrl.value);
+  previewUrl.value = '';
+  previewName.value = '';
 }
+
+onBeforeUnmount(releasePreview);
+
 const [Grid, gridApi] = useVbenVxeGrid({
+  formOptions: {
+    schema: useGridFormSchema(),
+    submitOnChange: true,
+  },
   gridOptions: {
     columns: useColumns(onActionClick),
     height: 'auto',
     keepSource: true,
-    showOverflow: false,
+    showOverflow: true,
     proxyConfig: {
       ajax: {
         query: async ({ page }, formValues) => {
-          const { created_at } = formValues;
-          const params = formValues;
+          const { created_at, ...rest } = formValues as any;
+          const params: Record<string, any> = {
+            page: page.currentPage,
+            pageSize: page.pageSize,
+            ...rest,
+          };
           if (
             created_at &&
             Array.isArray(created_at) &&
@@ -44,19 +60,13 @@ const [Grid, gridApi] = useVbenVxeGrid({
             params.form_time = created_at[0];
             params.to_time = created_at[1];
           }
-          const list = await getFileList({
-            page: page.currentPage,
-            pageSize: page.pageSize,
-            ...formValues,
-          });
-          return list;
+          return getFileList(params);
         },
       },
     },
     rowConfig: {
       keyField: 'id',
     },
-
     toolbarConfig: {
       custom: true,
       export: false,
@@ -68,66 +78,52 @@ const [Grid, gridApi] = useVbenVxeGrid({
 });
 
 function onActionClick(e: OnActionClickParams<SystemFileApi.SystemFile>) {
-  switch (e.code) {
-    case 'delete': {
-      onDelete(e.row);
-      break;
-    }
+  if (e.code === 'view') {
+    onView(e.row);
+    return;
+  }
+  if (e.code === 'delete') {
+    onDelete(e.row);
   }
 }
 
+async function onView(row: SystemFileApi.SystemFile) {
+  releasePreview();
+  const { resolvePrivateBlobUrl } = await import('#/utils/private-blob');
+  const preview = await loadFileImagePreview(row, resolvePrivateBlobUrl);
+  previewName.value = preview.name;
+  previewUrl.value = preview.url;
+  previewVisible.value = true;
+}
+
 function onDelete(row: SystemFileApi.SystemFile) {
-  const msg = ElMessage({
-    message: $t('ui.actionMessage.deleting', [row.name]),
-    duration: 0,
-  });
-  msg.close();
+  const name = row.original_name || String(row.id);
   deleteFile(row.id)
     .then(() => {
-      ElMessage.success($t('ui.actionMessage.deleteSuccess', [row.name]));
-      onRefresh();
+      ElMessage.success($t('ui.actionMessage.deleteSuccess', [name]));
+      gridApi.query();
     })
-    .catch(() => {
-      msg.close();
-    });
-}
-
-function onRefresh() {
-  gridApi.query();
-}
-
-function onCreate() {
-  open();
+    .catch(() => undefined);
 }
 </script>
+
 <template>
   <Page auto-content-height>
-    <Modal @success="onRefresh" />
-    <Grid table-title="文件列表">
-      <template #toolbar-tools>
-        <ElButton type="primary" @click="onCreate">
-          <Plus class="size-5" />
-          {{ $t('ui.actionTitle.create', ['文件']) }}
-        </ElButton>
-      </template>
-      <template #image-url="{ row }">
-        <ElImage
-          :src="row?.file_url"
-          fit="cover"
-          v-if="row.file_type === 'image'"
-          class="h-20 w-20"
-          preview-teleported
-          :preview-src-list="[row?.file_url]"
-        />
-        <div v-else class="flex items-center justify-center">
-          <!-- 文字居中-->
-          <div
-            class="text-center text-3xl rounded-full bg-[#810E0E] text-white p-2 w-15 h-15 flex items-center justify-center font-bold align-middle"
-          >
-            {{ row?.file_extension?.charAt(0).toUpperCase() }}
-          </div>
-        </div>
-      </template>
-    </Grid>
+    <Grid table-title="文件库存（安全元数据）" />
+    <ElDialog
+      v-model="previewVisible"
+      :title="previewName"
+      width="720px"
+      @closed="releasePreview"
+    >
+      <ElImage
+        v-if="previewUrl"
+        class="mx-auto block max-h-[70vh] max-w-full"
+        fit="contain"
+        :preview-src-list="[previewUrl]"
+        preview-teleported
+        :src="previewUrl"
+      />
+    </ElDialog>
   </Page>
 </template>

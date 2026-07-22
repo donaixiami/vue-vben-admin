@@ -123,7 +123,6 @@ export function useColumns<T = SystemUserApi.SystemUser>(
         options: [
           {
             code: 'edit',
-            show: (row: any) => row.root !== 1,
           },
           {
             code: 'reset-password',

@@ -2,62 +2,25 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { SystemFileApi } from '#/api';
 
-import { setUploadOss } from '#/api/system/file';
 import { $t } from '#/locales';
+import { formatByteSize, formatImageSize } from '#/utils/private-upload-form';
 
-export function useFormSchema(): VbenFormSchema[] {
-  return [
-    {
-      component: 'Upload',
-      componentProps: {
-        accept: '.png,.jpg,.jpeg',
-        customRequest: setUploadOss,
-        disabled: false,
-        maxCount: 1,
-        multiple: false,
-        showUploadList: true,
-        listType: 'picture-card',
-        drag: true,
-      },
-      fieldName: 'file',
-      label: '文件',
-      renderComponentContent: () => {
-        return {
-          default: () => $t('examples.form.upload-image'),
-        };
-      },
-      rules: 'required',
-    },
-  ];
-}
+import { canPreviewFile } from './modules/file-image-preview';
 
 export function useGridFormSchema(): VbenFormSchema[] {
   return [
     {
       component: 'Input',
-      fieldName: 'realName',
-      label: $t('system.role.roleName'),
+      fieldName: 'id',
+      label: 'ID',
       componentProps: { allowClear: true },
     },
     {
       component: 'Input',
-      fieldName: 'id',
-      label: $t('system.role.id'),
+      fieldName: 'original_name',
+      label: '文件名',
       componentProps: { allowClear: true },
     },
-    {
-      component: 'Select',
-      componentProps: {
-        allowClear: true,
-        options: [
-          { label: $t('common.enabled'), value: 1 },
-          { label: $t('common.disabled'), value: 0 },
-        ],
-      },
-      fieldName: 'status',
-      label: $t('system.role.status'),
-    },
-
     {
       component: 'RangePicker',
       fieldName: 'created_at',
@@ -71,60 +34,79 @@ export function useColumns<T = SystemFileApi.SystemFile>(
   onActionClick: OnActionClickFn<T>,
 ): VxeTableGridOptions['columns'] {
   return [
+    { field: 'id', title: 'ID', width: 80 },
     {
-      field: 'id',
-      title: 'ID',
-      width: 80,
-    },
-
-    {
-      // 添加样式
-      cellRender: {
-        name: 'CellImage',
-        attrs: { class: 'h-20 w-20', fit: 'cover' },
-      },
-      field: 'file_url',
-      title: '文件',
-      width: 130,
-
-      slots: { default: 'image-url' },
-    },
-    {
-      field: 'file_name',
+      field: 'original_name',
       title: '文件名',
       minWidth: 200,
     },
     {
-      field: 'file_type',
-      title: '文件类型',
-      minWidth: 200,
+      field: 'mime_type',
+      title: 'MIME',
+      minWidth: 140,
     },
     {
-      field: 'file_extension',
-      title: '文件扩展名',
-      minWidth: 200,
+      field: 'byte_size',
+      title: '大小',
+      width: 110,
+      formatter: ({ cellValue }) => formatByteSize(cellValue),
     },
-
+    {
+      field: 'is_image',
+      title: '图片',
+      width: 80,
+      formatter: ({ cellValue }) => (cellValue ? '是' : '否'),
+    },
+    {
+      field: 'image_size',
+      title: '尺寸',
+      width: 110,
+      formatter: ({ row }) =>
+        formatImageSize((row as any)?.image_width, (row as any)?.image_height),
+    },
+    {
+      field: 'content_hash_prefix',
+      title: 'Hash 前缀',
+      minWidth: 140,
+    },
+    {
+      field: 'ref_count',
+      title: '引用数',
+      width: 90,
+    },
+    {
+      field: 'delete_status',
+      title: '删除状态',
+      width: 110,
+    },
     {
       field: 'created_at',
       title: $t('system.role.createTime'),
-      width: 200,
+      width: 180,
     },
     {
       align: 'center',
       cellRender: {
         attrs: {
-          nameField: 'file_name',
+          nameField: 'original_name',
           nameTitle: '文件',
           onClick: onActionClick,
         },
         name: 'CellOperation',
-        options: ['delete'],
+        options: [
+          {
+            code: 'view',
+            contentText: '查看',
+            link: true,
+            show: (row: SystemFileApi.SystemFile) => canPreviewFile(row),
+          },
+          'delete',
+        ],
       },
       field: 'operation',
       fixed: 'right',
       title: $t('system.role.operation'),
-      width: 130,
+      width: 160,
     },
   ];
 }

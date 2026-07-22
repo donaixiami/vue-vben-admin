@@ -7,6 +7,8 @@ import type {
 } from '#/adapter/vxe-table';
 import type { SystemUserApi } from '#/api/system/user';
 
+import { onBeforeUnmount } from 'vue';
+
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { Plus } from '@vben/icons';
 
@@ -24,6 +26,16 @@ import { $t } from '#/locales';
 import { useColumns, useGridFormSchema } from './data';
 import Form from './modules/form.vue';
 import Tree from './modules/tree.vue';
+import { hydrateUserAvatarRows } from './modules/user-avatar-list';
+
+let avatarBlobUrls: string[] = [];
+
+function releaseAvatarBlobUrls() {
+  avatarBlobUrls.forEach((url) => URL.revokeObjectURL(url));
+  avatarBlobUrls = [];
+}
+
+onBeforeUnmount(releaseAvatarBlobUrls);
 
 const [FormDrawer, formDrawerApi] = useVbenDrawer({
   connectedComponent: Form,
@@ -55,12 +67,21 @@ const [Grid, gridApi] = useVbenVxeGrid({
             params.form_time = created_at[0];
             params.to_time = created_at[1];
           }
+          releaseAvatarBlobUrls();
           const list = await getUserList({
             page: page.currentPage,
             pageSize: page.pageSize,
             ...formValues,
           });
-          return list;
+          // 布局加载时不引入 Store/AppConfig；仅实际查询到头像票据后加载鉴权请求模块。
+          const { resolvePrivateBlobUrl } =
+            await import('#/utils/private-blob');
+          const hydrated = await hydrateUserAvatarRows(
+            list.items,
+            resolvePrivateBlobUrl,
+          );
+          avatarBlobUrls = hydrated.blobUrls;
+          return { ...list, items: hydrated.rows };
         },
       },
     },

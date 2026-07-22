@@ -18,7 +18,8 @@ export namespace SystemUserApi {
     /** 邮箱 */
     email?: string;
     /** 头像 */
-    avatar: string;
+    avatar: null | string;
+    avatarMediaRef?: null | string;
     /** 用户角色 */
     roles?: string[];
     /** 状态 */
@@ -40,7 +41,8 @@ export namespace SystemUserApi {
     /** 更新时间 */
     updatedAt: string;
     /** 头像 */
-    avatars?: (File & { response: { id: string; url: string } })[];
+    avatarUploadRef?: string;
+    avatars?: Array<{ response?: { uploadRef?: string } }>;
   }
 }
 
@@ -48,10 +50,10 @@ export namespace SystemUserApi {
  * 获取用户列表数据
  */
 async function getUserList(params: Recordable<any>) {
-  return requestClient.get<Array<SystemUserApi.SystemUser>>(
-    '/system/user/list',
-    { params },
-  );
+  return requestClient.get<{
+    items: SystemUserApi.SystemUser[];
+    total: number;
+  }>('/system/user/list', { params });
 }
 
 /**
