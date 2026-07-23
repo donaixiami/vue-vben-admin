@@ -1,6 +1,10 @@
 import { requestClient } from '#/api/request';
 
-export type UploadPurpose = 'avatar' | 'general' | 'notification';
+export type UploadPurpose =
+  | 'avatar'
+  | 'general'
+  | 'notification'
+  | 'notification_content';
 
 export interface UploadClaimResult {
   byteSize: number;

@@ -19,7 +19,12 @@ describe('用户列表私有头像', () => {
 
     // Then 只读取有效 mediaRef，并把 Blob URL 交给 CellImage 使用
     expect(resolve).toHaveBeenCalledTimes(1);
-    expect(resolve).toHaveBeenCalledWith('m_avatar');
+    expect(resolve).toHaveBeenCalledWith('m_avatar', {
+      fit: 'cover',
+      priority: -10,
+      size: 128,
+      variant: 'thumbnail',
+    });
     expect(result.rows[0]?.avatar).toBe('blob:avatar-1');
     expect(result.rows[1]?.avatar).toBeNull();
     expect(result.blobUrls).toEqual(['blob:avatar-1']);
@@ -35,5 +40,24 @@ describe('用户列表私有头像', () => {
 
     expect(result.rows[0]?.avatar).toBeNull();
     expect(result.blobUrls).toEqual([]);
+  });
+
+  it('列表请求失效时把 AbortSignal 传给每个头像读取', async () => {
+    const resolve = vi.fn().mockResolvedValue('blob:avatar-2');
+    const controller = new AbortController();
+
+    await hydrateUserAvatarRows(
+      [{ id: '1', avatar: null, avatarMediaRef: 'm_avatar' }],
+      resolve,
+      controller.signal,
+    );
+
+    expect(resolve).toHaveBeenCalledWith('m_avatar', {
+      fit: 'cover',
+      priority: -10,
+      signal: controller.signal,
+      size: 128,
+      variant: 'thumbnail',
+    });
   });
 });

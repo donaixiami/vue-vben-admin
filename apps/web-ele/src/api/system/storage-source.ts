@@ -2,6 +2,7 @@ import { requestClient } from '#/api/request';
 
 export namespace StorageSourceApi {
   export type Driver = 'aliyun_oss' | 'local';
+  export type DeliveryMode = 'cdn_signed' | 'oss_signed' | 'proxy';
   export type HealthStatus = 'degraded' | 'down' | 'healthy' | 'unknown';
 
   export interface StorageSource {
@@ -28,7 +29,7 @@ export namespace StorageSourceApi {
     priority: number;
     enabled: boolean;
     isFallback: boolean;
-    config: Record<string, string>;
+    config: Record<string, number | string>;
   }
 }
 

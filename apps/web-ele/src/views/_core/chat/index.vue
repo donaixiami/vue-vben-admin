@@ -51,10 +51,13 @@ import {
   resolveChatAssetBlobUrl,
   revokePrivateBlobUrl,
 } from '#/utils/private-blob';
+import { privateOptionsForChatAttachment } from '#/utils/private-media-variants';
 
 import {
   buildSendPayload,
   canSendWithAttachment,
+  createChatAttachmentBlobController,
+  createChatAttachmentUploadController,
   normalizeMessageAttachments,
 } from './modules/chat-attachment';
 import { createSeenMessageTracker } from './modules/message-sync';
@@ -97,6 +100,31 @@ const pendingAttachmentFile = ref<File>();
 const attachmentInputRef = ref<HTMLInputElement>();
 const attachmentBlobUrls = ref<Record<number, string>>({});
 const attachmentLoadErrors = ref<Record<number, boolean>>({});
+const attachmentBlobController = createChatAttachmentBlobController({
+  onError: (assetId) => {
+    attachmentLoadErrors.value = {
+      ...attachmentLoadErrors.value,
+      [assetId]: true,
+    };
+  },
+  onUrl: (assetId, url) => {
+    attachmentBlobUrls.value = {
+      ...attachmentBlobUrls.value,
+      [assetId]: url,
+    };
+  },
+  resolve: (assetId, options, attachment) =>
+    resolveChatAssetBlobUrl(
+      assetId,
+      privateOptionsForChatAttachment(attachment.kind, options),
+    ),
+  revoke: revokePrivateBlobUrl,
+});
+const attachmentUploadController = createChatAttachmentUploadController({
+  revoke: revokeChatAsset,
+});
+let historyGeneration = 0;
+let historyController: AbortController | undefined;
 const rawEvents = ref<string[]>([]); // 右侧原始事件调试面板
 const messageListRef = ref<HTMLElement>(); // 消息列表容器 DOM 引用（用于滚动到底）
 
@@ -282,29 +310,7 @@ function appendMessage(input: unknown, fallbackContent = '') {
 }
 
 async function loadAttachmentBlobs(attachments: ChatAttachmentView[]) {
-  await Promise.all(
-    attachments.map(async (attachment) => {
-      if (
-        attachment.status === 'revoked' ||
-        attachmentBlobUrls.value[attachment.assetId] ||
-        attachmentLoadErrors.value[attachment.assetId]
-      ) {
-        return;
-      }
-      try {
-        const url = await resolveChatAssetBlobUrl(attachment.assetId);
-        attachmentBlobUrls.value = {
-          ...attachmentBlobUrls.value,
-          [attachment.assetId]: url,
-        };
-      } catch {
-        attachmentLoadErrors.value = {
-          ...attachmentLoadErrors.value,
-          [attachment.assetId]: true,
-        };
-      }
-    }),
-  );
+  await attachmentBlobController.load(attachments);
 }
 
 function openAttachmentPicker() {
@@ -320,12 +326,13 @@ function getAttachmentBlobUrl(assetId: number): string {
 }
 
 async function uploadSelectedAttachment(file: File) {
+  const uploadRequest = attachmentUploadController.begin();
   releasePendingPreview();
   const kind = file.type.startsWith('image/') ? 'image' : 'file';
   const localPreviewUrl =
     kind === 'image' ? URL.createObjectURL(file) : undefined;
   pendingAttachmentFile.value = file;
-  pendingAttachment.value = {
+  const currentAttachment: PendingChatAttachment = {
     fileName: file.name,
     kind,
     localPreviewUrl,
@@ -333,10 +340,19 @@ async function uploadSelectedAttachment(file: File) {
     size: file.size,
     status: 'uploading',
   };
+  pendingAttachment.value = currentAttachment;
   try {
     const uploaded = await uploadChatAsset(file);
+    if (
+      !(await attachmentUploadController.accept(
+        uploadRequest,
+        uploaded.assetId,
+      ))
+    ) {
+      return;
+    }
     pendingAttachment.value = {
-      ...pendingAttachment.value,
+      ...currentAttachment,
       assetId: uploaded.assetId,
       kind: uploaded.kind,
       mimeType: uploaded.mimeType,
@@ -344,8 +360,9 @@ async function uploadSelectedAttachment(file: File) {
       status: 'ready',
     };
   } catch (error) {
+    if (!attachmentUploadController.isCurrent(uploadRequest.generation)) return;
     pendingAttachment.value = {
-      ...pendingAttachment.value,
+      ...currentAttachment,
       error: error instanceof Error ? error.message : '上传失败',
       status: 'failed',
     };
@@ -367,6 +384,7 @@ async function retryPendingAttachment() {
 
 async function removePendingAttachment(revokeAsset = true) {
   const assetId = pendingAttachment.value?.assetId;
+  attachmentUploadController.invalidate();
   releasePendingPreview();
   pendingAttachment.value = null;
   pendingAttachmentFile.value = undefined;
@@ -544,6 +562,11 @@ async function createSession() {
 // 加载历史消息：REST GET /chat/history/:sessionId。
 // 注意 sessionId 是【路径段】，不是查询参数（这点之前踩过 404 的坑）。
 async function loadHistory() {
+  const requestGeneration = ++historyGeneration;
+  historyController?.abort();
+  const requestController = new AbortController();
+  historyController = requestController;
+
   let sessionId: number;
   try {
     sessionId = parseChatSessionId(conversationId.value);
@@ -557,6 +580,7 @@ async function loadHistory() {
     const base = `${joinChatUrl(apiURL, historyUrl.value).replace(/\/+$/, '')}/${sessionId}`;
     const response = await fetch(base, {
       headers: getAuthHeaders(),
+      signal: requestController.signal,
     });
 
     if (!response.ok) {
@@ -565,6 +589,10 @@ async function loadHistory() {
 
     const result = await response.json();
     // 兼容游标分页 { data:{ items,... } } 与多种裸结构。
+    if (requestGeneration !== historyGeneration) return;
+    attachmentBlobController.reset();
+    attachmentBlobUrls.value = {};
+    attachmentLoadErrors.value = {};
     const rows = result?.data?.items ?? result?.data ?? result?.items ?? result;
     seenMessageTracker.reset();
     messages.value = Array.isArray(rows)
@@ -578,6 +606,12 @@ async function loadHistory() {
     );
     scrollToBottom();
   } catch (error) {
+    if (
+      requestGeneration !== historyGeneration ||
+      (error instanceof Error && error.name === 'AbortError')
+    ) {
+      return;
+    }
     ElMessage.error(
       error instanceof Error ? error.message : '历史消息加载失败',
     );
@@ -635,7 +669,12 @@ async function sendMessage() {
 
 // 清空消息列表和调试面板。
 function clearMessages() {
+  historyGeneration += 1;
+  historyController?.abort();
+  attachmentBlobController.clear();
   messages.value = [];
+  attachmentBlobUrls.value = {};
+  attachmentLoadErrors.value = {};
   rawEvents.value = [];
 }
 
@@ -652,10 +691,13 @@ function scrollToBottom() {
 // 组件卸载前断开连接，防止内存泄漏和野连接。
 onBeforeUnmount(() => {
   closeConnection();
+  historyGeneration += 1;
+  historyController?.abort();
+  attachmentUploadController.invalidate();
   releasePendingPreview();
-  Object.values(attachmentBlobUrls.value).forEach((url) =>
-    revokePrivateBlobUrl(url),
-  );
+  attachmentBlobController.dispose();
+  attachmentBlobUrls.value = {};
+  attachmentLoadErrors.value = {};
 });
 </script>
 

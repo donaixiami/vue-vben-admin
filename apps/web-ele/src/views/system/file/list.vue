@@ -17,6 +17,7 @@ import { $t } from '#/locales';
 
 import { useColumns, useGridFormSchema } from './data';
 import {
+  createFilePreviewController,
   loadFileImagePreview,
   releaseFileImagePreview,
 } from './modules/file-image-preview';
@@ -24,8 +25,10 @@ import {
 const previewVisible = ref(false);
 const previewName = ref('');
 const previewUrl = ref('');
+const previewController = createFilePreviewController();
 
 function releasePreview() {
+  previewController.invalidate();
   releaseFileImagePreview(previewUrl.value);
   previewUrl.value = '';
   previewName.value = '';
@@ -89,11 +92,32 @@ function onActionClick(e: OnActionClickParams<SystemFileApi.SystemFile>) {
 
 async function onView(row: SystemFileApi.SystemFile) {
   releasePreview();
+  const request = previewController.begin();
   const { resolvePrivateBlobUrl } = await import('#/utils/private-blob');
-  const preview = await loadFileImagePreview(row, resolvePrivateBlobUrl);
-  previewName.value = preview.name;
-  previewUrl.value = preview.url;
-  previewVisible.value = true;
+  try {
+    const preview = await loadFileImagePreview(
+      row,
+      (mediaRef, options) => resolvePrivateBlobUrl(mediaRef, options),
+      { signal: request.signal },
+    );
+    if (!previewController.isCurrent(request.generation)) {
+      releaseFileImagePreview(preview.url);
+      return;
+    }
+    previewName.value = preview.name;
+    previewUrl.value = preview.url;
+    previewVisible.value = true;
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.name === 'AbortError' || error.message === '私有媒体请求已取消')
+    ) {
+      return;
+    }
+    if (previewController.isCurrent(request.generation)) {
+      ElMessage.error('图片预览加载失败，请稍后重试');
+    }
+  }
 }
 
 function onDelete(row: SystemFileApi.SystemFile) {

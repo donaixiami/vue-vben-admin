@@ -2,7 +2,37 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { MonitorJobApi } from '#/api/monitor/job';
 
+import { formatDateTime } from '@vben/utils';
+
 import { $t } from '#/locales';
+
+type JobTagType = 'danger' | 'info' | 'primary' | 'success' | 'warning';
+
+export const TRIGGER_TYPE_OPTIONS = [
+  { label: '定时', type: 'primary', value: 'schedule' },
+  { label: '手动', type: 'success', value: 'manual' },
+  { label: '重试', type: 'warning', value: 'retry' },
+] satisfies Array<{
+  label: string;
+  type: JobTagType;
+  value: MonitorJobApi.TriggerType;
+}>;
+
+const UNKNOWN_TAG_OPTION = {
+  label: '未知',
+  type: 'info',
+} as const;
+
+export function getTriggerTypeOption(value: unknown) {
+  return (
+    TRIGGER_TYPE_OPTIONS.find((item) => item.value === value) ??
+    UNKNOWN_TAG_OPTION
+  );
+}
+
+export function formatJobTime(value?: null | string) {
+  return value ? formatDateTime(value) : '—';
+}
 
 export const JOB_STATUS_OPTIONS = [
   { label: '启用', type: 'success', value: 'enabled' },
@@ -15,7 +45,18 @@ export const RUN_STATUS_OPTIONS = [
   { label: '失败', type: 'danger', value: 'failed' },
   { label: '超时', type: 'warning', value: 'timeout' },
   { label: '已跳过', type: 'info', value: 'skipped' },
-];
+] satisfies Array<{
+  label: string;
+  type: JobTagType;
+  value: MonitorJobApi.RunStatus;
+}>;
+
+export function getRunStatusOption(value: unknown) {
+  return (
+    RUN_STATUS_OPTIONS.find((item) => item.value === value) ??
+    UNKNOWN_TAG_OPTION
+  );
+}
 
 export const MISFIRE_OPTIONS = [
   { label: '默认策略', value: 'default' },
@@ -71,8 +112,18 @@ export function useColumns<T = MonitorJobApi.Job>(
       title: '上次结果',
       width: 100,
     },
-    { field: 'last_run_at', minWidth: 170, title: '上次执行' },
-    { field: 'next_run_at', minWidth: 170, title: '下次执行' },
+    {
+      field: 'last_run_at',
+      formatter: 'formatDateTime',
+      minWidth: 170,
+      title: '上次执行',
+    },
+    {
+      field: 'next_run_at',
+      formatter: 'formatDateTime',
+      minWidth: 170,
+      title: '下次执行',
+    },
     {
       align: 'center',
       cellRender: {

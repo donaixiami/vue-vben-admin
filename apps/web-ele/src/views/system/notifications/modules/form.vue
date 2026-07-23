@@ -12,20 +12,70 @@ import {
 } from '#/api/system/notifications';
 import { $t } from '#/locales';
 import {
+  createPrivateBlobRequestController,
   resolvePrivateBlobUrl,
   revokePrivateBlobUrl,
 } from '#/utils/private-blob';
+import { PRIVATE_MEDIA_VARIANTS } from '#/utils/private-media-variants';
+import {
+  hydratePrivateRichTextHtml,
+  serializePrivateRichTextHtml,
+} from '#/utils/private-rich-text';
 import { buildNotificationSubmitPayload } from '#/utils/private-upload-form';
 
 import { useFormSchema } from '../data';
+import { createObjectUrlLifecycle } from './object-url-lifecycle';
 import { normalizePublishAtForSubmit } from './publish-at';
 
 const emits = defineEmits(['success']);
 
 const formData = ref<SystemNotificationsApi.SystemNotifications>();
+const id = ref();
+const previewBlobUrl = ref<null | string>(null);
+const previewController = createPrivateBlobRequestController();
+const localPreviewLifecycle = createObjectUrlLifecycle();
+let contentCleanup = () => {};
+const contentBlobUrls = new Set<string>();
+
+function releaseContentPreviews() {
+  contentCleanup();
+  contentCleanup = () => {};
+  contentBlobUrls.forEach((url) => URL.revokeObjectURL(url));
+  contentBlobUrls.clear();
+}
+
+function releasePreviewBlob() {
+  previewController.invalidate();
+  revokePrivateBlobUrl(previewBlobUrl.value);
+  previewBlobUrl.value = null;
+}
+
+function releaseOwnedPreviews() {
+  releasePreviewBlob();
+  localPreviewLifecycle.clear();
+  releaseContentPreviews();
+}
 
 const [Form, formApi] = useVbenForm({
-  schema: useFormSchema(),
+  schema: useFormSchema({
+    createPreviewUrl(file) {
+      releasePreviewBlob();
+      return localPreviewLifecycle.replace(file);
+    },
+    createContentPreviewUrl(file) {
+      const url = URL.createObjectURL(file);
+      contentBlobUrls.add(url);
+      return url;
+    },
+    onRemove(uploadFile) {
+      if (uploadFile?.url === localPreviewLifecycle.current()) {
+        localPreviewLifecycle.clear();
+      }
+      if (uploadFile?.url === previewBlobUrl.value) {
+        releasePreviewBlob();
+      }
+    },
+  }),
   showDefaultActions: false,
   commonConfig: {
     labelWidth: 130,
@@ -33,23 +83,19 @@ const [Form, formApi] = useVbenForm({
     formItemClass: 'items-start',
   },
 });
-
-const id = ref();
-const previewBlobUrl = ref<null | string>(null);
-function releasePreviewBlob() {
-  revokePrivateBlobUrl(previewBlobUrl.value);
-  previewBlobUrl.value = null;
-}
-onBeforeUnmount(() => releasePreviewBlob());
+onBeforeUnmount(releaseOwnedPreviews);
 const [Drawer, drawerApi] = useVbenDrawer({
   class: 'w-[800px]',
   async onConfirm() {
     const { valid } = await formApi.validate();
     if (!valid) return;
+    const rawValues =
+      await formApi.getValues<SystemNotificationsApi.CreateNotificationsParams>();
     const values = buildNotificationSubmitPayload(
-      normalizePublishAtForSubmit(
-        await formApi.getValues<SystemNotificationsApi.CreateNotificationsParams>(),
-      ),
+      normalizePublishAtForSubmit({
+        ...rawValues,
+        message: serializePrivateRichTextHtml(rawValues.message),
+      }),
     ) as SystemNotificationsApi.CreateNotificationsParams;
 
     drawerApi.lock();
@@ -68,12 +114,13 @@ const [Drawer, drawerApi] = useVbenDrawer({
 
   async onOpenChange(isOpen) {
     if (!isOpen) {
-      releasePreviewBlob();
+      releaseOwnedPreviews();
       return;
     }
     if (isOpen) {
       const data =
         drawerApi.getData<SystemNotificationsApi.SystemNotifications>();
+      releaseOwnedPreviews();
       formApi.resetForm();
 
       if (data) {
@@ -85,18 +132,30 @@ const [Drawer, drawerApi] = useVbenDrawer({
       }
       await nextTick();
       if (data) {
-        formApi.setValues(data);
+        const hydrated = await hydratePrivateRichTextHtml(
+          data.message,
+          data.contentImages,
+        );
+        contentCleanup = hydrated.cleanup;
+        formApi.setValues({ ...data, message: hydrated.html });
       } else {
         await formApi.setValues({
           send_now: false,
           type: 'system',
         });
       }
-      releasePreviewBlob();
+      const request = previewController.begin();
       const mediaRef = (data as any)?.avatarMediaRef as string | undefined;
       if (mediaRef) {
         try {
-          const url = await resolvePrivateBlobUrl(mediaRef);
+          const url = await resolvePrivateBlobUrl(mediaRef, {
+            ...PRIVATE_MEDIA_VARIANTS.notificationImage,
+            signal: request.signal,
+          });
+          if (!previewController.isCurrent(request.generation)) {
+            revokePrivateBlobUrl(url);
+            return;
+          }
           previewBlobUrl.value = url;
           formApi.setValues({
             avatars: [
@@ -109,7 +168,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
             ],
           });
         } catch {
-          // ignore preview failure
+          // 预览失败不阻塞其它字段编辑。
         }
       }
     }

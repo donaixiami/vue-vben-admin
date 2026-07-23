@@ -9,7 +9,10 @@ import {
 
 describe('存储源动态表单', () => {
   it('local 只显示根目录配置', () => {
-    expect(getStorageSourceConfigFields('local')).toEqual(['rootDir']);
+    expect(getStorageSourceConfigFields('local')).toEqual([
+      'rootDir',
+      'deliveryMode',
+    ]);
   });
 
   it('aliyun_oss 只提交环境变量引用', () => {
@@ -32,6 +35,8 @@ describe('存储源动态表单', () => {
       bucket: 'private',
       accessKeyIdRef: 'OSS_ID',
       accessKeySecretRef: 'OSS_SECRET',
+      deliveryMode: 'proxy',
+      signedUrlTtlSeconds: 120,
     });
     expect(JSON.stringify(payload)).not.toMatch(/plaintext/);
   });

@@ -4,6 +4,27 @@ type FormValues = Record<string, any> & {
   driver: StorageSourceApi.Driver;
 };
 
+function localConfig(values: FormValues): Record<string, number | string> {
+  return {
+    rootDir: String(values.rootDir ?? '').trim(),
+    deliveryMode: 'proxy',
+  };
+}
+
+function ossConfig(values: FormValues): Record<string, number | string> {
+  return {
+    region: String(values.region ?? '').trim(),
+    bucket: String(values.bucket ?? '').trim(),
+    accessKeyIdRef: String(values.accessKeyIdRef ?? '').trim(),
+    accessKeySecretRef: String(values.accessKeySecretRef ?? '').trim(),
+    deliveryMode: values.deliveryMode === 'oss_signed' ? 'oss_signed' : 'proxy',
+    signedUrlTtlSeconds: Math.min(
+      300,
+      Math.max(60, Math.floor(Number(values.signedUrlTtlSeconds) || 120)),
+    ),
+  };
+}
+
 export function getEditingStorageSource(
   data: Partial<StorageSourceApi.StorageSource> | undefined,
 ): StorageSourceApi.StorageSource | undefined {
@@ -14,8 +35,27 @@ export function getStorageSourceConfigFields(
   driver: StorageSourceApi.Driver,
 ): string[] {
   return driver === 'local'
-    ? ['rootDir']
-    : ['region', 'bucket', 'accessKeyIdRef', 'accessKeySecretRef'];
+    ? ['rootDir', 'deliveryMode']
+    : [
+        'region',
+        'bucket',
+        'accessKeyIdRef',
+        'accessKeySecretRef',
+        'deliveryMode',
+        'signedUrlTtlSeconds',
+      ];
+}
+
+export function getDeliveryModeOptions() {
+  return [
+    { label: '后端中转', value: 'proxy' },
+    { label: 'OSS 临时签名直连', value: 'oss_signed' },
+    { label: 'CDN 临时签名（暂不可用）', value: 'cdn_signed', disabled: true },
+  ] satisfies Array<{
+    disabled?: boolean;
+    label: string;
+    value: StorageSourceApi.DeliveryMode;
+  }>;
 }
 
 export function isStorageSourceIdentityLocked(
@@ -26,12 +66,8 @@ export function isStorageSourceIdentityLocked(
 }
 
 export function buildStorageSourcePayload(values: FormValues) {
-  const config = Object.fromEntries(
-    getStorageSourceConfigFields(values.driver).map((key) => [
-      key,
-      String(values[key] ?? '').trim(),
-    ]),
-  );
+  const config: Record<string, number | string> =
+    values.driver === 'local' ? localConfig(values) : ossConfig(values);
   return {
     code: String(values.code ?? '').trim(),
     name: String(values.name ?? '').trim(),

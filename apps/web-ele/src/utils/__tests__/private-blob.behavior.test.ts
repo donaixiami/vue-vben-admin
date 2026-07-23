@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  clearPrivateBlobCache,
   resolveChatAssetBlobUrl,
   resolvePrivateBlobUrl,
   revokePrivateBlobUrl,
@@ -30,6 +31,7 @@ describe('鉴权 Blob 内容读取与生命周期', () => {
     fetchMock.mockReset();
     createObjectURL.mockClear();
     revokeObjectURL.mockClear();
+    clearPrivateBlobCache();
   });
 
   it('用 Bearer 拉取 mediaRef 并创建 Object URL', async () => {

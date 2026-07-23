@@ -6,6 +6,7 @@ import type { Extensions } from '@tiptap/vue-3';
 import type {
   ImageResizeOptions,
   ImageUploadOptions,
+  ImageUploadResult,
   VbenTiptapExtensionOptions,
 } from './types';
 
@@ -188,7 +189,7 @@ function createUploadProcess(
       });
       editor.view.dispatch(transaction);
     })
-    .then((url: string) => {
+    .then((result: ImageUploadResult | string) => {
       if (editor.isDestroyed) {
         URL.revokeObjectURL(blobUrl);
         return;
@@ -209,11 +210,15 @@ function createUploadProcess(
         return;
       }
 
+      const upload = typeof result === 'string' ? { src: result } : result;
+      const uploadRef =
+        typeof result === 'string' ? undefined : result.uploadRef;
       const transaction = editor.state.tr.setNodeMarkup(currentPos, undefined, {
         ...node.attrs,
         'data-upload-progress': null,
         'data-uploading': null,
-        src: url,
+        src: upload.src,
+        ...(uploadRef ? { 'data-upload-ref': uploadRef } : {}),
       });
       editor.view.dispatch(transaction);
       blobUrlTracker?.delete(blobUrl);
@@ -269,6 +274,22 @@ function createCustomImage(
           renderHTML: () => {
             return {};
           },
+        },
+        'data-upload-ref': {
+          default: null,
+          parseHTML: (element) => element.dataset.uploadRef,
+          renderHTML: (attributes) =>
+            attributes['data-upload-ref']
+              ? { 'data-upload-ref': attributes['data-upload-ref'] }
+              : {},
+        },
+        'data-asset-ref': {
+          default: null,
+          parseHTML: (element) => element.dataset.assetRef,
+          renderHTML: (attributes) =>
+            attributes['data-asset-ref']
+              ? { 'data-asset-ref': attributes['data-asset-ref'] }
+              : {},
         },
       };
     },

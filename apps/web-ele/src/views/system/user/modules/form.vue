@@ -18,9 +18,11 @@ import { getRoleList } from '#/api/system/role';
 import { createUser, updateUser } from '#/api/system/user';
 import { $t } from '#/locales';
 import {
+  createPrivateBlobRequestController,
   resolvePrivateBlobUrl,
   revokePrivateBlobUrl,
 } from '#/utils/private-blob';
+import { PRIVATE_MEDIA_VARIANTS } from '#/utils/private-media-variants';
 import { buildUserSubmitPayload } from '#/utils/private-upload-form';
 const emits = defineEmits(['success']);
 
@@ -35,8 +37,10 @@ const [Form, formApi] = useVbenForm({
 const dialogVisible = ref(false);
 const dialogImageUrl = ref('');
 const previewBlobUrl = ref<null | string>(null);
+const previewController = createPrivateBlobRequestController();
 
 function releasePreviewBlob() {
+  previewController.invalidate();
   revokePrivateBlobUrl(previewBlobUrl.value);
   previewBlobUrl.value = null;
 }
@@ -52,6 +56,7 @@ function useFormSchema(): VbenFormSchema[] {
         onSuccess: (response: any, uploadFile: any) => {
           // 本地 File 预览即可；response 只保留 uploadRef 供提交
           if (uploadFile?.raw instanceof File) {
+            previewController.invalidate();
             const localUrl = URL.createObjectURL(uploadFile.raw);
             revokePrivateBlobUrl(previewBlobUrl.value);
             previewBlobUrl.value = localUrl;
@@ -59,6 +64,7 @@ function useFormSchema(): VbenFormSchema[] {
           }
           uploadFile.response = response;
         },
+        onRemove: () => releasePreviewBlob(),
         disabled: false,
         maxCount: 1,
         multiple: false,
@@ -315,10 +321,18 @@ const [Drawer, drawerApi] = useVbenDrawer({
       formApi.setValues(data);
     }
 
+    const request = previewController.begin();
     const mediaRef = (data as any)?.avatarMediaRef as string | undefined;
     if (mediaRef) {
       try {
-        const url = await resolvePrivateBlobUrl(mediaRef);
+        const url = await resolvePrivateBlobUrl(mediaRef, {
+          ...PRIVATE_MEDIA_VARIANTS.userFormAvatar,
+          signal: request.signal,
+        });
+        if (!previewController.isCurrent(request.generation)) {
+          revokePrivateBlobUrl(url);
+          return;
+        }
         previewBlobUrl.value = url;
         formApi.setValues({
           avatars: [
@@ -331,7 +345,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
           ],
         });
       } catch {
-        // 预览失败不阻塞其它字段编辑
+        // 预览失败不阻塞其它字段编辑。
       }
     }
   },

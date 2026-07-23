@@ -5,9 +5,12 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { SystemNotificationsApi } from '#/api';
 
-import { markRaw, ref } from 'vue';
+import { markRaw } from 'vue';
 
-import { createPrivateUploadRequest } from '#/api/common/upload';
+import {
+  createPrivateUploadRequest,
+  uploadPrivateFile,
+} from '#/api/common/upload';
 import { getDictionaryByIdentifier } from '#/api/system/dictionary';
 import { $t } from '#/locales';
 
@@ -20,10 +23,16 @@ import {
 } from './modules/publish-at';
 import TargetTable from './modules/target-table.vue';
 
-const dialogImageUrl = ref('');
-const dialogVisible = ref(false);
+export interface NotificationUploadPreviewHooks {
+  createPreviewUrl?: (file: File) => string;
+  createContentPreviewUrl?: (file: File) => string;
+  onPreview?: (url: string | undefined) => void;
+  onRemove?: (file: any) => void;
+}
 
-export function useFormSchema(): VbenFormSchema[] {
+export function useFormSchema(
+  hooks: NotificationUploadPreviewHooks = {},
+): VbenFormSchema[] {
   return [
     {
       component: 'Input',
@@ -38,6 +47,25 @@ export function useFormSchema(): VbenFormSchema[] {
       rules: 'required',
       componentProps: {
         imageResizable: true,
+        imageUpload: {
+          upload: async (
+            file: File,
+            onProgress?: (percent: number) => void,
+          ) => {
+            onProgress?.(0);
+            const result = await uploadPrivateFile(
+              file,
+              'notification_content',
+            );
+            onProgress?.(100);
+            return {
+              src:
+                hooks.createContentPreviewUrl?.(file) ??
+                URL.createObjectURL(file),
+              uploadRef: result.uploadRef,
+            };
+          },
+        },
       },
     },
     {
@@ -124,18 +152,20 @@ export function useFormSchema(): VbenFormSchema[] {
         httpRequest: createPrivateUploadRequest('notification'),
         onSuccess: (response: any, uploadFile: any) => {
           if (uploadFile?.raw instanceof File) {
-            uploadFile.url = URL.createObjectURL(uploadFile.raw);
+            uploadFile.url =
+              hooks.createPreviewUrl?.(uploadFile.raw) ??
+              URL.createObjectURL(uploadFile.raw);
           }
           uploadFile.response = response;
         },
+        onRemove: (uploadFile: any) => hooks.onRemove?.(uploadFile),
         disabled: false,
         limit: 1,
         listType: 'picture-card',
         maxCount: 1,
         multiple: false,
         onPreview: (file: any) => {
-          dialogImageUrl.value = file?.url;
-          dialogVisible.value = true;
+          hooks.onPreview?.(file?.url);
         },
         showUploadList: true,
       },

@@ -22,7 +22,12 @@ export interface ImageUploadOptions {
   upload: (
     file: File,
     onProgress?: (percent: number) => void,
-  ) => Promise<string>;
+  ) => Promise<ImageUploadResult>;
+}
+
+export interface ImageUploadResult {
+  src: string;
+  uploadRef: string;
 }
 
 export interface ImageResizeOptions {

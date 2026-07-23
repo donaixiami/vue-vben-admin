@@ -26,16 +26,30 @@ import { $t } from '#/locales';
 import { useColumns, useGridFormSchema } from './data';
 import Form from './modules/form.vue';
 import Tree from './modules/tree.vue';
-import { hydrateUserAvatarRows } from './modules/user-avatar-list';
+import {
+  createUserAvatarQueryController,
+  hydrateUserAvatarRows,
+} from './modules/user-avatar-list';
 
 let avatarBlobUrls: string[] = [];
+const avatarQueryController = createUserAvatarQueryController();
+let releaseAvatarBlobUrl = (url: string) => URL.revokeObjectURL(url);
+
+function createAvatarQueryAbortError() {
+  const error = new Error('用户头像请求已取消');
+  error.name = 'AbortError';
+  return error;
+}
 
 function releaseAvatarBlobUrls() {
-  avatarBlobUrls.forEach((url) => URL.revokeObjectURL(url));
+  avatarBlobUrls.forEach((url) => releaseAvatarBlobUrl(url));
   avatarBlobUrls = [];
 }
 
-onBeforeUnmount(releaseAvatarBlobUrls);
+onBeforeUnmount(() => {
+  avatarQueryController.invalidate();
+  releaseAvatarBlobUrls();
+});
 
 const [FormDrawer, formDrawerApi] = useVbenDrawer({
   connectedComponent: Form,
@@ -57,8 +71,15 @@ const [Grid, gridApi] = useVbenVxeGrid({
       autoLoad: false,
       ajax: {
         query: async ({ page }, formValues) => {
-          const { created_at } = formValues;
-          const params = formValues;
+          const request = avatarQueryController.begin();
+          releaseAvatarBlobUrls();
+
+          const { created_at, ...rest } = formValues as Record<string, any>;
+          const params: Record<string, any> = {
+            page: page.currentPage,
+            pageSize: page.pageSize,
+            ...rest,
+          };
           if (
             created_at &&
             Array.isArray(created_at) &&
@@ -67,19 +88,27 @@ const [Grid, gridApi] = useVbenVxeGrid({
             params.form_time = created_at[0];
             params.to_time = created_at[1];
           }
-          releaseAvatarBlobUrls();
-          const list = await getUserList({
-            page: page.currentPage,
-            pageSize: page.pageSize,
-            ...formValues,
-          });
+          const list = await getUserList(params);
+          if (!avatarQueryController.isCurrent(request.generation)) {
+            throw createAvatarQueryAbortError();
+          }
+          if (!list.items.some((row) => row.avatarMediaRef)) return list;
           // 布局加载时不引入 Store/AppConfig；仅实际查询到头像票据后加载鉴权请求模块。
-          const { resolvePrivateBlobUrl } =
+          const { resolvePrivateBlobUrl, revokePrivateBlobUrl } =
             await import('#/utils/private-blob');
+          releaseAvatarBlobUrl = revokePrivateBlobUrl;
+          if (!avatarQueryController.isCurrent(request.generation)) {
+            throw createAvatarQueryAbortError();
+          }
           const hydrated = await hydrateUserAvatarRows(
             list.items,
             resolvePrivateBlobUrl,
+            request.signal,
           );
+          if (!avatarQueryController.isCurrent(request.generation)) {
+            hydrated.blobUrls.forEach((url) => revokePrivateBlobUrl(url));
+            throw createAvatarQueryAbortError();
+          }
           avatarBlobUrls = hydrated.blobUrls;
           return { ...list, items: hydrated.rows };
         },

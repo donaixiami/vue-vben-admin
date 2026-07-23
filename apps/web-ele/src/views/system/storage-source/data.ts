@@ -3,6 +3,7 @@ import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { StorageSourceApi } from '#/api/system/storage-source';
 
 import { canDeleteStorageSource } from './modules/storage-source-actions';
+import { getDeliveryModeOptions } from './modules/storage-source-form';
 
 const DRIVER_LABELS: Record<StorageSourceApi.Driver, string> = {
   local: '本地存储',
@@ -117,6 +118,33 @@ export function useFormSchema(editing = false): VbenFormSchema[] {
           },
         }) as VbenFormSchema,
     ),
+    {
+      component: 'Select',
+      componentProps: { options: getDeliveryModeOptions() },
+      defaultValue: 'proxy',
+      fieldName: 'deliveryMode',
+      help: '临时链接将在设定时间后失效。如果 OSS 未允许当前访问域名，或存储配置异常，图片可能无法直连；系统会在签名失败时自动切换为后端中转。',
+      label: '访问方式',
+      rules: 'required',
+      dependencies: {
+        show: (values) => values.driver === 'aliyun_oss',
+        triggerFields: ['driver'],
+      },
+    },
+    {
+      component: 'InputNumber',
+      componentProps: { max: 300, min: 60, precision: 0 },
+      defaultValue: 120,
+      fieldName: 'signedUrlTtlSeconds',
+      label: '签名有效期（秒）',
+      rules: 'required',
+      dependencies: {
+        show: (values) =>
+          values.driver === 'aliyun_oss' &&
+          values.deliveryMode === 'oss_signed',
+        triggerFields: ['driver', 'deliveryMode'],
+      },
+    },
   ];
 }
 

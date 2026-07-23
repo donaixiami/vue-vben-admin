@@ -19,7 +19,13 @@ import {
 
 import { clearJobLogs, deleteJobLog, getJobLogs } from '#/api/monitor/job';
 
-import { RUN_STATUS_OPTIONS } from '../data';
+import {
+  formatJobTime,
+  getRunStatusOption,
+  getTriggerTypeOption,
+  RUN_STATUS_OPTIONS,
+  TRIGGER_TYPE_OPTIONS,
+} from '../data';
 
 const job = ref<MonitorJobApi.Job>();
 const rows = ref<MonitorJobApi.JobLog[]>([]);
@@ -58,16 +64,6 @@ async function clear() {
   await load();
 }
 
-function statusType(
-  status: MonitorJobApi.RunStatus,
-): 'danger' | 'info' | 'primary' | 'success' | 'warning' {
-  if (status === 'success') return 'success';
-  if (status === 'failed') return 'danger';
-  if (status === 'timeout') return 'warning';
-  if (status === 'running') return 'primary';
-  return 'info';
-}
-
 const [Drawer, drawerApi] = useVbenDrawer({
   class: 'w-[960px] max-w-full',
   showConfirmButton: false,
@@ -104,23 +100,42 @@ const [Drawer, drawerApi] = useVbenDrawer({
         class="w-36"
         @change="load"
       >
-        <ElOption label="定时" value="schedule" />
-        <ElOption label="手动" value="manual" />
-        <ElOption label="重试" value="retry" />
+        <ElOption
+          v-for="item in TRIGGER_TYPE_OPTIONS"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
       </ElSelect>
       <ElButton type="danger" plain @click="clear">清理日志</ElButton>
     </div>
     <div class="w-full overflow-x-auto">
       <ElTable v-loading="loading" :data="rows" min-width="900">
         <ElTableColumn prop="id" label="ID" width="70" />
-        <ElTableColumn prop="trigger_type" label="触发方式" width="100" />
-        <ElTableColumn label="状态" width="100">
+        <ElTableColumn label="触发方式" width="100">
           <template #default="{ row }">
-            <ElTag :type="statusType(row.status)">{{ row.status }}</ElTag>
+            <ElTag :type="getTriggerTypeOption(row.trigger_type).type">
+              {{ getTriggerTypeOption(row.trigger_type).label }}
+            </ElTag>
           </template>
         </ElTableColumn>
-        <ElTableColumn prop="started_at" label="开始时间" width="180" />
-        <ElTableColumn prop="finished_at" label="结束时间" width="180" />
+        <ElTableColumn label="状态" width="100">
+          <template #default="{ row }">
+            <ElTag :type="getRunStatusOption(row.status).type">
+              {{ getRunStatusOption(row.status).label }}
+            </ElTag>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="开始时间" width="180">
+          <template #default="{ row }">
+            {{ formatJobTime(row.started_at) }}
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="结束时间" width="180">
+          <template #default="{ row }">
+            {{ formatJobTime(row.finished_at) }}
+          </template>
+        </ElTableColumn>
         <ElTableColumn prop="duration_ms" label="耗时(ms)" width="110" />
         <ElTableColumn prop="retry_number" label="重试" width="80" />
         <ElTableColumn

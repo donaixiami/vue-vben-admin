@@ -3,6 +3,10 @@ import type { Recordable } from '@vben/types';
 import { requestClient } from '#/api/request';
 
 export namespace SystemNotificationsApi {
+  export interface NotificationContentImage {
+    assetRef: string;
+    mediaRef: string;
+  }
   export type NotificationId = number;
   export type NotificationPriority = 'high' | 'low' | 'medium';
   export type NotificationSendStatus =
@@ -35,6 +39,7 @@ export namespace SystemNotificationsApi {
     target_type: NotificationTargetType;
     title: string;
     type: NotificationType;
+    contentImages?: NotificationContentImage[];
     updated_at: null | string;
     user_id: null | number;
   }
@@ -46,6 +51,7 @@ export namespace SystemNotificationsApi {
     id: number;
     is_read: boolean;
     message: string;
+    contentImages?: NotificationContentImage[];
     notification_id: NotificationId;
     priority: NotificationPriority;
     read_at: null | string;
