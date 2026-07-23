@@ -33,7 +33,9 @@ export async function hydratePrivateRichTextHtml(
   const urls: string[] = [];
   const controller = createPrivateBlobRequestController();
   const request = controller.begin();
-  const images = [...document.querySelectorAll('img[data-asset-ref]')];
+  const images = [
+    ...document.querySelectorAll<HTMLImageElement>('img[data-asset-ref]'),
+  ];
   await Promise.all(
     images.map(async (image) => {
       const assetRef = image.dataset.assetRef;

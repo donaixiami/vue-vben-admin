@@ -1,13 +1,16 @@
 # Project Context and Recovery Notes
 
-## 2026-07-23 Unified Netdisk Account Pool Plan (Not Implemented)
+## 2026-07-24 Unified Netdisk Account Pool (Implemented)
 
 - Design: `../docs/superpowers/specs/2026-07-23-unified-netdisk-account-pool-design.md` from the workspace root.
 - Plan: `../docs/superpowers/plans/2026-07-23-unified-netdisk-account-pool-plan.md` from the workspace root.
 - Extend the existing `apps/web-ele/src/views/system/storage-source` page with category/provider/account grouping, capacity, upload/download speed, provision status, file-scope multi-select, OAuth binding, quota refresh and speed-test actions.
 - Keep the current `Page + useVbenVxeGrid + useVbenDrawer + Vben Form + Element Plus` composition; do not add a second layout system.
 - `sys.storage.minFreeBytes` stays in the existing system-config page with a GB editor and bytes API value.
-- Before Vben implementation, create and confirm the required local partial-UI HTML preview; before any test body or production code, pass the repository BDD skeleton gate.
+- The local partial-UI preview was confirmed before migration. The web-ele page now provides grouped summaries, category/provider/status filters, capacity and speed formatting, provision-state polling, file-scope multi-selects, dynamic driver-schema forms, OAuth binding, quota refresh, speed tests and centralized permission codes.
+- OAuth start sends `{ code, name, priority, enabled, isFallback, allowedMimeGroups, allowedBizTypes, config }`; the UI intentionally does not expose a fake reauthorization action.
+- `sys.storage.minFreeBytes` uses a GB editor while preserving bytes in the API payload.
+- Focused Vitest, web-ele typecheck and `build:ele` passed on 2026-07-24.
 
 <!-- cspell:ignore depts -->
 

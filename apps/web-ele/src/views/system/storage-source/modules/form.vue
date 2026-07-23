@@ -8,7 +8,10 @@ import { useVbenDrawer } from '@vben/common-ui';
 import { useVbenForm } from '#/adapter/form';
 import {
   createStorageSource,
+  getStorageSourceDrivers,
+  startStorageSourceOAuth,
   updateStorageSource,
+  updateStorageSourceRoutingPolicy,
 } from '#/api/system/storage-source';
 
 import { useFormSchema } from '../data';
@@ -20,6 +23,7 @@ import {
 
 const emits = defineEmits(['success']);
 const current = ref<StorageSourceApi.StorageSource>();
+const drivers = ref<StorageSourceApi.DriverDescriptor[]>([]);
 
 const [Form, formApi] = useVbenForm({
   schema: useFormSchema(false),
@@ -33,15 +37,45 @@ const [Drawer, drawerApi] = useVbenDrawer({
     const payload = buildStorageSourcePayload(
       (await formApi.getValues()) as any,
     );
+    const selectedDriver = drivers.value.find(
+      (driver) => driver.type === payload.driver,
+    );
     drawerApi.lock();
-    const request = current.value
-      ? updateStorageSource(current.value.id, {
+    if (!current.value && selectedDriver?.capabilities.supportsOAuth) {
+      try {
+        const { authorizationUrl } = await startStorageSourceOAuth(
+          selectedDriver.type,
+          {
+            code: payload.code,
+            name: payload.name,
+            priority: payload.priority,
+            enabled: payload.enabled,
+            isFallback: payload.isFallback,
+            allowedMimeGroups: payload.allowedMimeGroups,
+            allowedBizTypes: payload.allowedBizTypes,
+            config: payload.config,
+          },
+        );
+        window.location.assign(authorizationUrl);
+      } catch {
+        drawerApi.unlock();
+      }
+      return;
+    }
+    const currentId = current.value?.id;
+    const request = currentId
+      ? updateStorageSource(currentId, {
           name: payload.name,
-          priority: payload.priority,
-          enabled: payload.enabled,
-          isFallback: payload.isFallback,
           config: payload.config,
-        })
+        }).then(() =>
+          updateStorageSourceRoutingPolicy(currentId, {
+            priority: payload.priority,
+            enabled: payload.enabled,
+            isFallback: payload.isFallback,
+            allowedMimeGroups: payload.allowedMimeGroups,
+            allowedBizTypes: payload.allowedBizTypes,
+          }),
+        )
       : createStorageSource(payload);
     request
       .then(() => {
@@ -52,10 +86,13 @@ const [Drawer, drawerApi] = useVbenDrawer({
   },
   async onOpenChange(open) {
     if (!open) return;
+    drivers.value = await getStorageSourceDrivers();
     current.value = getEditingStorageSource(
       drawerApi.getData<Partial<StorageSourceApi.StorageSource>>(),
     );
-    formApi.setState({ schema: useFormSchema(Boolean(current.value?.id)) });
+    formApi.setState({
+      schema: useFormSchema(Boolean(current.value?.id), drivers.value),
+    });
     await formApi.resetForm();
     await nextTick();
     if (current.value) {
@@ -65,10 +102,11 @@ const [Drawer, drawerApi] = useVbenDrawer({
 });
 
 const title = computed(() => (current.value ? '编辑存储源' : '新增存储源'));
+const confirmText = computed(() => (current.value ? '保存' : '继续'));
 </script>
 
 <template>
-  <Drawer :title="title" class="w-[620px]">
+  <Drawer :title="title" :confirm-text="confirmText" class="w-[620px]">
     <Form />
   </Drawer>
 </template>

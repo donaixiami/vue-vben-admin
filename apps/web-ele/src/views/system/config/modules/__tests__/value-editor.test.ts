@@ -4,6 +4,7 @@ import {
   applyConfigValueEditorSchema,
   CAPTCHA_DECOY_MODE_CONFIG_KEY,
   CAPTCHA_DECOY_PROBABILITY_CONFIG_KEY,
+  STORAGE_MIN_FREE_BYTES_CONFIG_KEY,
   createConfigValueSchema,
   hydrateSystemConfigForm,
   normalizeSystemConfigEditorValues,
@@ -276,5 +277,26 @@ describe('system config value editor', () => {
         remark: '   ',
       }),
     ).toMatchObject({ config_value: null, remark: null });
+  });
+
+  it('以 GB 水合最低保留容量并提交整数 bytes 字符串', () => {
+    expect(
+      createConfigValueSchema(STORAGE_MIN_FREE_BYTES_CONFIG_KEY),
+    ).toMatchObject({
+      component: 'InputNumber',
+      componentProps: { min: 0, precision: 2, step: 1 },
+    });
+    expect(
+      normalizeSystemConfigEditorValues(STORAGE_MIN_FREE_BYTES_CONFIG_KEY, {
+        config_value: '5368709120',
+      }),
+    ).toEqual({ config_value: 5 });
+    expect(
+      normalizeSystemConfigSubmitValues({
+        config_key: STORAGE_MIN_FREE_BYTES_CONFIG_KEY,
+        config_value: 5.5,
+        name: '最低保留容量',
+      }),
+    ).toMatchObject({ config_value: '5905580032' });
   });
 });

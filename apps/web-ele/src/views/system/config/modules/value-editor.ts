@@ -6,6 +6,8 @@ import { z } from '#/adapter/form';
 export const CAPTCHA_DECOY_MODE_CONFIG_KEY = 'sys.captcha.decoyMode';
 export const CAPTCHA_DECOY_PROBABILITY_CONFIG_KEY =
   'sys.captcha.decoyProbability';
+export const STORAGE_MIN_FREE_BYTES_CONFIG_KEY = 'sys.storage.minFreeBytes';
+const BYTES_PER_GB = 1024 ** 3;
 
 const CONFIG_VALUE_SCHEMA_BASE = {
   fieldName: 'config_value',
@@ -40,6 +42,17 @@ export function normalizeSystemConfigEditorValues(
   configKey: string | undefined,
   values: Record<string, unknown>,
 ): Record<string, unknown> {
+  if (configKey === STORAGE_MIN_FREE_BYTES_CONFIG_KEY) {
+    const configValue = values.config_value;
+    if (configValue === null || configValue === undefined) return values;
+    const bytes = Number(configValue);
+    return {
+      ...values,
+      config_value:
+        Number.isFinite(bytes) && bytes >= 0 ? bytes / BYTES_PER_GB : null,
+    };
+  }
+
   if (configKey !== CAPTCHA_DECOY_PROBABILITY_CONFIG_KEY) return values;
 
   const configValue = values.config_value;
@@ -109,6 +122,19 @@ export function createConfigValueSchema(configKey?: string): VbenFormSchema {
     };
   }
 
+  if (configKey === STORAGE_MIN_FREE_BYTES_CONFIG_KEY) {
+    return {
+      ...CONFIG_VALUE_SCHEMA_BASE,
+      component: 'InputNumber',
+      componentProps: {
+        min: 0,
+        precision: 2,
+        step: 1,
+      },
+      rules: z.number().min(0, '最低保留容量不能小于 0 GB'),
+    };
+  }
+
   return {
     ...CONFIG_VALUE_SCHEMA_BASE,
     component: 'Textarea',
@@ -144,9 +170,14 @@ function normalizeConfigValue(value: null | number | string | undefined) {
 export function normalizeSystemConfigSubmitValues(
   values: SystemConfigSubmitValues,
 ): SystemConfigApi.CreateConfigParams {
+  const configValue =
+    values.config_key === STORAGE_MIN_FREE_BYTES_CONFIG_KEY &&
+    typeof values.config_value === 'number'
+      ? String(Math.round(values.config_value * BYTES_PER_GB))
+      : normalizeConfigValue(values.config_value);
   return {
     config_key: values.config_key?.trim() ?? '',
-    config_value: normalizeConfigValue(values.config_value),
+    config_value: configValue,
     is_system: values.is_system ?? false,
     name: values.name?.trim() ?? '',
     remark: normalizeNullableText(values.remark),

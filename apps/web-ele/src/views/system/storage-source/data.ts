@@ -2,22 +2,34 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { StorageSourceApi } from '#/api/system/storage-source';
 
-import { canDeleteStorageSource } from './modules/storage-source-actions';
-import { getDeliveryModeOptions } from './modules/storage-source-form';
+import { getStorageSourceActionOptions } from './modules/storage-source-actions';
+import {
+  buildStorageSourceSchema,
+  getDeliveryModeOptions,
+} from './modules/storage-source-form';
+import {
+  formatStorageBytes,
+  formatStorageDate,
+  formatStorageRate,
+  getStorageSourceStatusMeta,
+  summarizeFileScope,
+} from './modules/storage-source-metrics';
+import { getStorageCategoryLabel } from './modules/storage-source-routing';
 
-const DRIVER_LABELS: Record<StorageSourceApi.Driver, string> = {
-  local: '本地存储',
-  aliyun_oss: '阿里云 OSS',
-};
+const LEGACY_DRIVER_OPTIONS = [
+  { label: '本地存储', value: 'local' },
+  { label: '阿里云 OSS', value: 'aliyun_oss' },
+];
 
-const HEALTH_LABELS: Record<StorageSourceApi.HealthStatus, string> = {
-  unknown: '未检查',
-  healthy: '健康',
-  degraded: '降级',
-  down: '不可用',
-};
-
-export function useGridFormSchema(): VbenFormSchema[] {
+export function useGridFormSchema(
+  drivers:
+    | (() => StorageSourceApi.DriverDescriptor[])
+    | StorageSourceApi.DriverDescriptor[] = [],
+): VbenFormSchema[] {
+  const driverOptions = () =>
+    (typeof drivers === 'function' ? drivers() : drivers).map(
+      ({ label, type: value }) => ({ label, value }),
+    );
   return [
     {
       component: 'Input',
@@ -27,20 +39,51 @@ export function useGridFormSchema(): VbenFormSchema[] {
     },
     {
       component: 'Select',
-      fieldName: 'driver',
-      label: '驱动',
+      fieldName: 'category',
+      label: '存储类型',
       componentProps: {
         allowClear: true,
-        options: Object.entries(DRIVER_LABELS).map(([value, label]) => ({
-          label,
-          value,
-        })),
+        options: [
+          { label: '本地存储', value: 'local' },
+          { label: '对象存储', value: 'object_storage' },
+          { label: '网盘存储', value: 'netdisk' },
+        ],
+      },
+    },
+    {
+      component: 'Select',
+      fieldName: 'driver',
+      label: '服务商',
+      componentProps: () => ({
+        allowClear: true,
+        options: driverOptions(),
+      }),
+    },
+    {
+      component: 'Select',
+      fieldName: 'provisionStatus',
+      label: '账号状态',
+      componentProps: {
+        allowClear: true,
+        options: [
+          { label: '可用', value: 'ready' },
+          { label: '检测中', value: 'testing' },
+          { label: '待清理', value: 'cleanup_pending' },
+          { label: '待授权', value: 'pending_auth' },
+          { label: '接入失败', value: 'failed' },
+        ],
       },
     },
   ];
 }
 
-export function useFormSchema(editing = false): VbenFormSchema[] {
+export function useFormSchema(
+  editing = false,
+  drivers: StorageSourceApi.DriverDescriptor[] = [],
+): VbenFormSchema[] {
+  if (drivers.length > 0) return buildStorageSourceSchema(drivers, editing);
+
+  // 兼容尚未加载驱动目录的首次打开；正式字段在抽屉打开时由 registry schema 替换。
   const identityProps = { disabled: editing };
   return [
     {
@@ -60,10 +103,7 @@ export function useFormSchema(editing = false): VbenFormSchema[] {
       component: 'Select',
       componentProps: {
         disabled: editing,
-        options: Object.entries(DRIVER_LABELS).map(([value, label]) => ({
-          label,
-          value,
-        })),
+        options: LEGACY_DRIVER_OPTIONS,
       },
       defaultValue: 'local',
       fieldName: 'driver',
@@ -150,16 +190,47 @@ export function useFormSchema(editing = false): VbenFormSchema[] {
 
 export function useColumns(
   onActionClick: OnActionClickFn<StorageSourceApi.StorageSource>,
+  drivers:
+    | (() => StorageSourceApi.DriverDescriptor[])
+    | StorageSourceApi.DriverDescriptor[] = [],
+  hasPermission: (code: any) => boolean = () => true,
 ): VxeTableGridOptions<StorageSourceApi.StorageSource>['columns'] {
+  const actionLabels: Record<string, string> = {
+    delete: '删除',
+    disable: '禁用',
+    edit: '编辑',
+    enable: '启用',
+    'health-check': '健康检查',
+    'quota-refresh': '刷新容量',
+    'speed-test': '重新测速',
+  };
+  const actionCodes = (row: StorageSourceApi.StorageSource) =>
+    new Set(
+      getStorageSourceActionOptions(
+        row,
+        new Map(
+          (typeof drivers === 'function' ? drivers() : drivers).map(
+            (driver) => [driver.type, driver],
+          ),
+        ).get(row.driver),
+        hasPermission,
+      ).map(({ code }) => code),
+    );
   return [
     { field: 'name', title: '名称', minWidth: 170 },
     { field: 'code', title: '编码', minWidth: 170 },
     {
       field: 'driver',
-      title: '驱动',
+      title: '服务商',
       width: 120,
+      formatter: ({ row }) => row.providerLabel,
+    },
+    {
+      field: 'sourceKind',
+      title: '类型',
+      width: 100,
       formatter: ({ cellValue }) =>
-        DRIVER_LABELS[cellValue as StorageSourceApi.Driver] ?? cellValue,
+        getStorageCategoryLabel(cellValue as StorageSourceApi.StorageCategory),
     },
     { field: 'priority', title: '优先级', width: 90 },
     {
@@ -169,20 +240,43 @@ export function useColumns(
       formatter: ({ cellValue }) => (cellValue ? '兜底' : '主存储'),
     },
     {
-      field: 'enabled',
+      field: 'provisionStatus',
       title: '状态',
-      width: 90,
-      formatter: ({ cellValue }) => (cellValue ? '已启用' : '已禁用'),
+      width: 110,
+      formatter: ({ row }) => getStorageSourceStatusMeta(row).label,
     },
     {
-      field: 'healthStatus',
-      title: '健康状态',
-      width: 110,
-      formatter: ({ cellValue }) =>
-        HEALTH_LABELS[cellValue as StorageSourceApi.HealthStatus] ?? cellValue,
+      field: 'quota',
+      title: '容量',
+      width: 170,
+      formatter: ({ row }) =>
+        `${formatStorageBytes(row.quota.freeBytes)} 可用 / ${formatStorageBytes(
+          row.quota.totalBytes,
+        )}`,
+    },
+    {
+      field: 'speed',
+      title: '速率',
+      width: 170,
+      formatter: ({ row }) =>
+        `上行 ${formatStorageRate(row.speed.uploadBps)} / 下行 ${formatStorageRate(
+          row.speed.downloadBps,
+        )}`,
+    },
+    {
+      field: 'allowedMimeGroups',
+      title: '文件范围',
+      minWidth: 150,
+      formatter: ({ row }) =>
+        summarizeFileScope(row.allowedMimeGroups, row.allowedBizTypes),
     },
     { field: 'referenceCount', title: '引用文件', width: 100 },
-    { field: 'healthCheckedAt', title: '最近检查', width: 180 },
+    {
+      field: 'updatedAt',
+      title: '最近更新',
+      width: 180,
+      formatter: ({ cellValue }) => formatStorageDate(cellValue),
+    },
     {
       align: 'center',
       cellRender: {
@@ -193,25 +287,21 @@ export function useColumns(
           onClick: onActionClick,
         },
         options: [
-          'edit',
-          { code: 'health-check', contentText: '检查', link: true },
-          {
-            code: 'disable',
-            contentText: '禁用',
+          ...[
+            'edit',
+            'health-check',
+            'quota-refresh',
+            'speed-test',
+            'disable',
+            'enable',
+            'delete',
+          ].map((code) => ({
+            code,
+            contentText: actionLabels[code] ?? code,
             link: true,
-            show: (row: StorageSourceApi.StorageSource) => row.enabled,
-          },
-          {
-            code: 'enable',
-            contentText: '启用',
-            link: true,
-            show: (row: StorageSourceApi.StorageSource) => !row.enabled,
-          },
-          {
-            code: 'delete',
-            disabled: (row: StorageSourceApi.StorageSource) =>
-              !canDeleteStorageSource(row),
-          },
+            show: (row: StorageSourceApi.StorageSource) =>
+              actionCodes(row).has(code),
+          })),
         ],
       },
       field: 'operation',

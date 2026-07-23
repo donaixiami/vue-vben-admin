@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import pageSource from '../list.vue?raw';
+import formSource from '../modules/form.vue?raw';
 import {
   canDeleteStorageSource,
   storageSourceActionRequiresConfirm,
@@ -24,5 +25,21 @@ describe('Vben 存储源管理页面', () => {
     expect(storageSourceActionRequiresConfirm('delete')).toBe(true);
     expect(storageSourceActionRequiresConfirm('disable')).toBe(true);
     expect(storageSourceActionRequiresConfirm('health-check')).toBe(false);
+  });
+
+  it('编排驱动目录、概览、OAuth、容量刷新和测速操作', () => {
+    expect(pageSource).toContain('getStorageSourceDrivers');
+    expect(pageSource).toContain('getStorageSourceSummary');
+    expect(formSource).toContain('startStorageSourceOAuth');
+    expect(pageSource).toContain('refreshStorageSourceQuota');
+    expect(pageSource).toContain('runStorageSourceSpeedTest');
+    expect(pageSource).toContain('STORAGE_SOURCE_PERMISSION_CODES');
+  });
+
+  it('仅在后端生命周期存在过渡状态时启动轮询', () => {
+    expect(pageSource).toContain('shouldPollStorageSources');
+    expect(pageSource).toContain('startStatusPolling');
+    expect(pageSource).toContain('stopStatusPolling');
+    expect(pageSource).not.toContain('enabled=true 即可路由');
   });
 });
