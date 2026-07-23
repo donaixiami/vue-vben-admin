@@ -1,5 +1,14 @@
 # Project Context and Recovery Notes
 
+## 2026-07-23 Unified Netdisk Account Pool Plan (Not Implemented)
+
+- Design: `../docs/superpowers/specs/2026-07-23-unified-netdisk-account-pool-design.md` from the workspace root.
+- Plan: `../docs/superpowers/plans/2026-07-23-unified-netdisk-account-pool-plan.md` from the workspace root.
+- Extend the existing `apps/web-ele/src/views/system/storage-source` page with category/provider/account grouping, capacity, upload/download speed, provision status, file-scope multi-select, OAuth binding, quota refresh and speed-test actions.
+- Keep the current `Page + useVbenVxeGrid + useVbenDrawer + Vben Form + Element Plus` composition; do not add a second layout system.
+- `sys.storage.minFreeBytes` stays in the existing system-config page with a GB editor and bytes API value.
+- Before Vben implementation, create and confirm the required local partial-UI HTML preview; before any test body or production code, pass the repository BDD skeleton gate.
+
 <!-- cspell:ignore depts -->
 
 Last updated: 2026-07-14
